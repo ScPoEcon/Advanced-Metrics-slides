@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>ScPoEconometrics Advanced</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Florian Oswald" />
+    <link href="libs/remark-css/default.css" rel="stylesheet" />
+    <script src="https://use.fontawesome.com/5235085b15.js"></script>
+    
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-41584331-6"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+    
+      gtag('config', 'UA-41584331-6');
+    </script>
+    <link rel="stylesheet" href="../../css/scpo.css" type="text/css" />
+    <link rel="stylesheet" href="../../css/scpo-fonts.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+# ScPoEconometrics Advanced
+## Recap 2
+### Florian Oswald
+### SciencesPo Paris </br> 2020-09-10
+
+---
+
+
+layout: true
+
+&lt;div class="my-footer"&gt;&lt;img src="../../img/logo/ScPo-shield.png" style="height: 60px;"/&gt;&lt;/div&gt; 
+
+---
+
+
+
+
+
+# Recap 2
+
+.pull-left[
+
+* Last time, we refreshed our basic OLS knowledge
+
+* Today we continue and look at more than one explanatory variable, and associated problems
+
+]
+
+
+.pull-right[
+
+* But, why *more than one variable*?
+
+* Like, **how many** other variables?
+
+* And, above all: **which ones** ? 🤔
+
+
+]
+
+--
+
+&lt;br&gt;
+&lt;br&gt;
+
+.center[We will remember what we meant by **a model**.]
+
+---
+
+# Back to the STAR Experiment
+
+.left-thin[
+
+* Remember what we learned about the [STAR Experiment](https://scpoecon.github.io/ScPoEconometrics/STAR.html)
+
+* What is the causal impact of class size on test scores?
+
+* `\(\text{score}_i = \beta_0 + \beta_1 \text{classize}_i + u_i\)` ?
+ 
+* We use a **model** to order our thoughts about how a causal impact is determined. 
+
+]
+
+--
+
+.right-wide[
+&lt;img src="star1-1.png" width="1792" style="display: block; margin: auto;" /&gt;
+]
+
+---
+class: middle
+
+# Multiple Variables
+
+Let's augment our model with more variables:
+
+`$$y = \beta_0 + \beta_1 x_1 + \beta_2 x_2  + \beta_3 x_3 +u$$`
+
+
+---
+# Spot the Difference 🕵️
+
+
+&lt;img src="recap2_files/figure-html/dag1-1.svg" style="display: block; margin: auto;" /&gt;
+
+---
+
+layout: false
+class: title-slide-section-red, middle
+
+# Omitted-variable bias
+
+---
+layout: true
+# Omitted-variable bias
+
+---
+
+
+**Omitted-variable bias** (OVB) arises when we omit a variable that
+
+1. affects our outcome variable `\(y\)`
+
+2. correlates with an explanatory variable `\(x_j\)`
+
+As it's name suggests, this situation leads to bias in our estimate of `\(\beta_j\)`.
+
+--
+
+**Note:** OVB Is not exclusive to multiple linear regression, but it does require multiple variables affect `\(y\)`.
+
+---
+
+**Example**
+
+Let's imagine a simple model for the amount individual `\(i\)` gets paid
+
+$$ \text{Pay}_i = \beta_0 + \beta_1 \text{School}_i + \beta_2 \text{Male}_i + u_i $$
+
+where
+
+- `\(\text{School}_i\)` gives `\(i\)`'s years of schooling
+- `\(\text{Male}_i\)` denotes an indicator variable for whether individual `\(i\)` is male.
+
+thus
+
+- `\(\beta_1\)`: the returns to an additional year of schooling (*ceteris paribus*)
+- `\(\beta_2\)`: the premium for being male (*ceteris paribus*)
+&lt;br&gt;If `\(\beta_2 &gt; 0\)`, then there is discrimination against women—receiving less pay based upon gender.
+
+---
+layout: true
+# Omitted-variable bias
+
+**Example, continued**
+
+---
+
+From our population model
+
+$$ \text{Pay}_i = \beta_0 + \beta_1 \text{School}_i + \beta_2 \text{Male}_i + u_i $$
+
+If a study focuses on the relationship between pay and schooling, _i.e._,
+
+$$ \text{Pay}_i = \beta_0 + \beta_1 \text{School}_i + \left(\beta_2 \text{Male}_i + u_i\right) $$
+$$ \text{Pay}_i = \beta_0 + \beta_1 \text{School}_i + \varepsilon_i $$
+
+where `\(\varepsilon_i = \beta_2 \text{Male}_i + u_i\)`.
+
+We used our exogeneity assumption to derive OLS' unbiasedness. But even if `\(\mathop{\boldsymbol{E}}\left[ u | X \right] = 0\)`, it is not true that `\(\mathop{\boldsymbol{E}}\left[ \varepsilon | X \right] = 0\)` so long as `\(\beta_2 \neq 0\)`.
+
+Specifically, `\(\mathop{\boldsymbol{E}}\left[ \varepsilon | \text{Male} = 1 \right] = \beta_2 + \mathop{\boldsymbol{E}}\left[ u | \text{Male} = 1 \right] \neq 0\)`.
+--
+ **Now OLS is biased.**
+
+---
+
+Let's try to see this result graphically.
+
+
+
+The population model:
+
+$$ \text{Pay}_i = 20 + 0.5 \times \text{School}_i + 10 \times \text{Male}_i + u_i $$
+
+Our regression model that suffers from omitted-variable bias:
+
+$$ \text{Pay}_i = \hat{\beta}_0 + \hat{\beta}_1 \times \text{School}_i + e_i $$
+
+Finally, imagine that women, on average, receive more schooling than men.
+
+---
+layout: true
+# Omitted-variable bias
+**Example, continued:** `\(\text{Pay}_i = 20 + 0.5 \times \text{School}_i + 10 \times \text{Male}_i + u_i\)`
+
+---
+
+The relationship between pay and schooling.
+
+&lt;img src="recap2_files/figure-html/plot ovb 1-1.svg" style="display: block; margin: auto;" /&gt;
+---
+count: false
+Biased regression estimate: `\(\widehat{\text{Pay}}_i = 31.3 + -0.9 \times \text{School}_i\)`
+
+&lt;img src="recap2_files/figure-html/plot ovb 2-1.svg" style="display: block; margin: auto;" /&gt;
+
+---
+---
+count: false
+Recalling the omitted variable: Gender **female** and .hi-slate[male]
+
+&lt;img src="recap2_files/figure-html/plot ovb 3-1.svg" style="display: block; margin: auto;" /&gt;
+
+---
+count: false
+Recalling the omitted variable: Gender **female** and .hi-slate[male]
+
+&lt;img src="recap2_files/figure-html/plot ovb 4-1.svg" style="display: block; margin: auto;" /&gt;
+
+---
+count: false
+Unbiased regression estimate: `\(\widehat{\text{Pay}}_i = 20.9 + 0.4 \times \text{School}_i + 9.1 \times \text{Male}_i\)`
+
+&lt;img src="recap2_files/figure-html/plot ovb 5-1.svg" style="display: block; margin: auto;" /&gt;
+---
+layout: false
+class: clear, middle, center
+
+
+
+
+---
+layout: false
+
+# Omitted-variable bias
+
+## Solutions
+
+1. Don't omit variables 😜
+
+2. Instrumental variables and two-stage least squares (coming soon): If we could find something that **only** affects `\(x_1\)` but *not* the omitted variable, we can make progress!
+
+3. Use multiple observations for the same unit `\(i\)`: panel data.
+
+**Warning:** There are situations in which neither solution is possible.
+
+--
+
+1. Proceed with caution (sometimes you can sign the bias).
+
+2. The key is to have a mental map of *should* belong to the model. 
+
+
+
+---
+
+
+---
+layout: false
+class: title-slide-section-red, middle
+
+# Interpreting coefficients
+
+
+---
+# Interpreting coefficients
+## Continuous variables
+
+Consider the relationship
+
+$$ \text{Pay}_i = \beta_0 + \beta_1 \, \text{School}_i + u_i $$
+
+where
+
+- `\(\text{Pay}_i\)` is a continuous variable measuring an individual's pay
+- `\(\text{School}_i\)` is a continuous variable that measures years of education
+
+---
+
+# Interpreting coefficients
+**Interpretations**
+
+- `\(\beta_0\)`: the `\(y\)`-intercept, _i.e._, `\(\text{Pay}\)` when `\(\text{School} = 0\)`
+- `\(\beta_1\)`: the expected increase in `\(\text{Pay}\)` for a one-unit increase in `\(\text{School}\)`
+
+---
+# Interpreting coefficients
+## Continuous variables
+
+
+Consider the model
+
+$$ y = \beta_0 + \beta_1 \, x + u $$
+
+Differentiate the model:
+
+$$ \dfrac{dy}{dx} = \beta_1 $$
+
+
+---
+# Interpreting coefficients
+## Categorical variables
+
+Consider the relationship
+
+$$ \text{Pay}_i = \beta_0 + \beta_1 \, \text{Female}_i + u_i $$
+
+where
+
+- `\(\text{Pay}_i\)` is a continuous variable measuring an individual's pay
+- `\(\text{Female}_i\)` is a binary/indicator variable taking `\(1\)` when `\(i\)` is female
+
+---
+# Interpreting coefficients
+**Interpretations**
+
+- `\(\beta_0\)`: the expected `\(\text{Pay}\)` for males (_i.e._, when `\(\text{Female} = 0\)`)
+- `\(\beta_1\)`: the expected difference in `\(\text{Pay}\)` between females and males
+- `\(\beta_0 + \beta_1\)`: the expected `\(\text{Pay}\)` for females
+
+---
+# Interpreting coefficients
+## Categorical variables
+
+Derivations
+
+$$
+`\begin{aligned}
+ \mathop{\boldsymbol{E}}\left[ \text{Pay} | \text{Male} \right] &amp;=
+ \mathop{\boldsymbol{E}}\left[ \beta_0 + \beta_1\times 0 + u_i \right] \\
+ &amp;= \mathop{\boldsymbol{E}}\left[ \beta_0 + 0 + u_i \right] \\
+ &amp;= \beta_0
+\end{aligned}`
+$$
+
+--
+
+$$
+`\begin{aligned}
+ \mathop{\boldsymbol{E}}\left[ \text{Pay} | \text{Female} \right] &amp;=
+ \mathop{\boldsymbol{E}}\left[ \beta_0 + \beta_1\times 1 + u_i \right] \\
+ &amp;= \mathop{\boldsymbol{E}}\left[ \beta_0 + \beta_1 + u_i \right] \\
+ &amp;= \beta_0 + \beta_1
+\end{aligned}`
+$$
+
+--
+
+**Note:** If there are no other variables to condition on, then `\(\hat{\beta}_1\)` equals the difference in group means, _e.g._, `\(\overline{x}_\text{Female} - \overline{x}_\text{Male}\)`.
+
+--
+
+**Note&lt;sub&gt;2&lt;/sub&gt;:** The *holding all other variables constant* interpretation also applies for categorical variables in multiple regression settings.
+
+---
+# Interpreting coefficients
+## Categorical variables
+
+`\(y_i = \beta_0 + \beta_1 x_i + u_i\)` for binary variable `\(x_i = \{\color{#314f4f}{0}, \, \color{#d90502}{1}\}\)`
+
+
+
+&lt;img src="recap2_files/figure-html/dat plot 1-1.svg" style="display: block; margin: auto;" /&gt;
+
+---
+# Interpreting coefficients
+## Categorical variables
+
+`\(y_i = \beta_0 + \beta_1 x_i + u_i\)` for binary variable `\(x_i = \{\color{#314f4f}{0}, \, \color{#d90502}{1}\}\)`
+
+&lt;img src="recap2_files/figure-html/dat plot 2-1.svg" style="display: block; margin: auto;" /&gt;
+---
+# Interpreting coefficients
+## Interactions
+
+Interactions allow the effect of one variable to change based upon the level of another variable.
+
+**Examples**
+
+1. Does the effect of schooling on pay change by gender?
+
+1. Does the effect of gender on pay change by race?
+
+1. Does the effect of schooling on pay change by experience?
+
+---
+# Interpreting coefficients
+## Interactions
+
+Previously, we considered a model that allowed women and men to have different wages, but the model assumed the effect of school on pay was the same for everyone:
+
+$$ \text{Pay}_i = \beta_0 + \beta_1 \, \text{School}_i + \beta_2 \, \text{Female}_i + u_i $$
+
+but we can also allow the effect of school to vary by gender:
+
+$$ \text{Pay}_i = \beta_0 + \beta_1 \, \text{School}_i + \beta_2 \, \text{Female}_i + \beta_3 \, \text{School}_i\times\text{Female}_i + u_i $$
+
+---
+# Interpreting coefficients
+## Interactions
+
+The model where schooling has the same effect for everyone (**&lt;font color="#e64173"&gt;F&lt;/font&gt;** and **&lt;font color="#314f4f"&gt;M&lt;/font&gt;**):
+
+
+
+&lt;img src="recap2_files/figure-html/int plot 1-1.svg" style="display: block; margin: auto;" /&gt;
+
+---
+# Interpreting coefficients
+## Interactions
+
+The model where schooling's effect can differ by gender (**&lt;font color="#e64173"&gt;F&lt;/font&gt;** and **&lt;font color="#314f4f"&gt;M&lt;/font&gt;**):
+
+&lt;img src="recap2_files/figure-html/int plot 2-1.svg" style="display: block; margin: auto;" /&gt;
+
+---
+# Interpreting coefficients
+## Interactions
+
+Interpreting coefficients can be a little tricky with interactions, but the key&lt;sup&gt;.pink[†]&lt;/sup&gt; is to carefully work through the math.
+
+.footnote[.pink[†] As is often the case with econometrics.]
+
+$$ \text{Pay}_i = \beta_0 + \beta_1 \, \text{School}_i + \beta_2 \, \text{Female}_i + \beta_3 \, \text{School}_i\times\text{Female}_i + u_i $$
+
+Expected returns for an additional year of schooling for women:
+
+$$
+`\begin{aligned}
+ \mathop{\boldsymbol{E}}\left[ \text{Pay}_i | \text{Female} \land \text{School} = \ell + 1 \right] -
+    \mathop{\boldsymbol{E}}\left[ \text{Pay}_i | \text{Female} \land \text{School} = \ell \right] &amp;= \\
+ \mathop{\boldsymbol{E}}\left[ \beta_0 + \beta_1 (\ell+1) + \beta_2 + \beta_3 (\ell + 1) + u_i \right] -
+    \mathop{\boldsymbol{E}}\left[ \beta_0 + \beta_1 \ell + \beta_2 + \beta_3 \ell + u_i  \right] &amp;= \\
+ \beta_1 + \beta_3
+\end{aligned}`
+$$
+
+--
+
+Similarly, `\(\beta_1\)` gives the expected return to an additional year of schooling for men. Thus, `\(\beta_3\)` gives the **difference in the returns to schooling** for women and men.
+
+---
+# Interpreting coefficients
+## Log-linear specification
+
+In economics, you will frequently see logged outcome variables with linear (non-logged) explanatory variables, _e.g._,
+
+$$ \log(\text{Pay}_i) = \beta_0 + \beta_1 \, \text{School}_i + u_i $$
+
+This specification changes our interpretation of the slope coefficients.
+
+**Interpretation**
+
+- A one-unit increase in our explanatory variable increases the outcome variable by approximately `\(\beta_1\times 100\)` percent.
+
+- *Example:* An additional year of schooling increases pay by approximately 3 percent (for `\(\beta_1 = 0.03\)`).
+
+---
+# Interpreting coefficients
+## Log-linear specification
+
+**Derivation**
+
+Consider the log-linear model
+
+$$ \log(y) = \beta_0 + \beta_1 \, x + u $$
+
+and differentiate
+
+$$ \dfrac{dy}{y} = \beta_1 dx $$
+
+So a marginal change in `\(x\)` (_i.e._, `\(dx\)`) leads to a `\(\beta_1 dx\)` **percentage change** in `\(y\)`.
+
+---
+# Interpreting coefficients
+## Log-linear specification
+
+Because the log-linear specification comes with a different interpretation, you need to make sure it fits your data-generating process/model.
+
+Does `\(x\)` change `\(y\)` in levels (_e.g._, a 3-unit increase) or percentages (_e.g._, a 10-percent increase)?
+
+--
+
+_I.e._, you need to be sure an exponential relationship makes sense:
+
+$$ \log(y_i) = \beta_0 + \beta_1 \, x_i + u_i \iff y_i = e^{\beta_0 + \beta_1 x_i + u_i} $$
+
+---
+# Interpreting coefficients
+## Log-linear specification
+
+&lt;img src="recap2_files/figure-html/log linear plot-1.svg" style="display: block; margin: auto;" /&gt;
+
+
+---
+# Interpreting coefficients
+## Log-log specification
+
+Similarly, econometricians frequently employ log-log models, in which the outcome variable is logged *and* at least one explanatory variable is logged
+
+$$ \log(\text{Pay}_i) = \beta_0 + \beta_1 \, \log(\text{School}_i) + u_i $$
+
+**Interpretation:**
+
+- A one-percent increase in `\(x\)` will lead to a `\(\beta_1\)` percent change in `\(y\)`.
+- Often interpreted as an elasticity.
+
+---
+# Interpreting coefficients
+## Log-log specification
+
+**Derivation**
+
+Consider the log-log model
+
+$$ \log(y) = \beta_0 + \beta_1 \, \log(x) + u $$
+
+and differentiate
+
+$$ \dfrac{dy}{y} = \beta_1 \dfrac{dx}{x} $$
+
+which says that for a one-percent increase in `\(x\)`, we will see a `\(\beta_1\)` percent increase in `\(y\)`. As an elasticity:
+
+$$ \dfrac{dy}{dx} \dfrac{x}{y} = \beta_1 $$
+
+---
+# Interpreting coefficients
+## Log-linear with a binary variable
+
+**Note:** If you have a log-linear model with a binary indicator variable, the interpretation for the coefficient on that variable changes.
+
+Consider
+
+$$ \log(y_i) = \beta_0 + \beta_1 x_1 + u_i $$
+
+for binary variable `\(x_1\)`.
+
+The interpretation of `\(\beta_1\)` is now
+
+- When `\(x_1\)` changes from 0 to 1, `\(y\)` will change by `\(100 \times \left( e^{\beta_1} -1 \right)\)` percent.
+- When `\(x_1\)` changes from 1 to 0, `\(y\)` will change by `\(100 \times \left( e^{-\beta_1} -1 \right)\)` percent.
+
+
+---
+# Interpreting coefficients
+## Log-log specification
+
+&lt;img src="recap2_files/figure-html/log log plot-1.svg" style="display: block; margin: auto;" /&gt;
+
+---
+layout: true
+# Additional topics
+
+---
+class: inverse, middle
+
+---
+## Inference *vs.* prediction
+
+So far, we've focused mainly **statistical inference**—using estimators and their distributions properties to try to learn about underlying, unknown population parameters.
+
+$$ y\_i = \color{#e64173}{\hat{\beta}\_{0}} + \color{#e64173}{\hat{\beta\_1}} \, x\_{1i} + \color{#e64173}{\hat{\beta\_2}} \, x\_{2i} + \cdots + \color{#e64173}{\hat{\beta}\_{k}} \, x\_{ki} + e\_i $$
+
+--
+
+**Prediction** includes a fairly different set of topics/tools within econometrics (and data science/machine learning)—creating models that accurately estimate individual observations.
+
+$$ \color{#e64173}{\hat{y}\_i} = \mathop{\hat{f}}\left( x_1,\, x_2,\, \ldots x_k \right) $$
+
+---
+## Inference *vs.* prediction
+
+Succinctly
+
+- **Inference:** causality, `\(\hat{\beta}_k\)` (consistent and efficient), standard errors/hypothesis tests for `\(\hat{\beta}_k\)`, generally OLS
+
+- **Prediction:**&lt;sup&gt;.pink[†]&lt;/sup&gt; correlation, `\(\hat{y}_i\)` (low error), model selection, nonlinear models are much more common
+
+.footnote[
+.pink[†] Includes forecasting.
+]
+
+---
+## Treatment effects and causality
+
+Much of modern (micro)econometrics focuses on causally estimating (*identifying*) the effect of programs/policies, _e.g._,
+
+- [Government shutdowns](https://www.sciencedirect.com/science/article/pii/S004727271830118X)
+- [The minimum wage](https://www.jstor.org/stable/2118030)
+- [Recreational-cannabis legalization](https://pages.uoregon.edu/bchansen/working.html)
+- [Salary-history bans](http://www.drewmcnichols.com/research)
+- [Preschool](https://amstat.tandfonline.com/doi/abs/10.1198/016214508000000841#.XD4PVy2ZNO4)
+- [The Clean Water Act](https://academic.oup.com/qje/article-abstract/134/1/349/5092609)
+
+--
+
+In this literature, the program is often a binary variable, and we place high importance on finding an unbiased estimate for the program's effect, `\(\hat{\tau}\)`.
+
+$$ \text{Outcome}_i = \beta_0 + \tau \, \text{Program}_i + u_i $$
+
+---
+layout: false
+class: title-slide-final, middle
+background-image: url(../img/logo/ScPo-econ.png)
+background-size: 250px
+background-position: 9% 19%
+
+# END
+
+
+
+
+|                                                                                                            |                                   |
+| :--------------------------------------------------------------------------------------------------------- | :-------------------------------- |
+| &lt;a href="mailto:florian.oswald@sciencespo.fr"&gt;.ScPored[&lt;i class="fa fa-paper-plane fa-fw"&gt;&lt;/i&gt;]               | florian.oswald@sciencespo.fr       |
+| &lt;a href="https://github.com/ScPoEcon/Advanced-Metrics-slides"&gt;.ScPored[&lt;i class="fa fa-link fa-fw"&gt;&lt;/i&gt;] | Slides |
+| &lt;a href="https://scpoecon.github.io/ScPoEconometrics"&gt;.ScPored[&lt;i class="fa fa-link fa-fw"&gt;&lt;/i&gt;] | Book |
+| &lt;a href="http://twitter.com/ScPoEcon"&gt;.ScPored[&lt;i class="fa fa-twitter fa-fw"&gt;&lt;/i&gt;]                          | @ScPoEcon                         |
+| &lt;a href="http://github.com/ScPoEcon"&gt;.ScPored[&lt;i class="fa fa-github fa-fw"&gt;&lt;/i&gt;]                          | @ScPoEcon                       |
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script src="../../js/ru_xaringan.js"></script>
+<script>var slideshow = remark.create({
+"highlightStyle": "github",
+"highlightLines": true,
+"countIncrementalSlides": false,
+"ratio": "16:9"
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>

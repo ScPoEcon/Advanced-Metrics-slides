@@ -1,0 +1,113 @@
+---
+title: "ScPoEconometrics: Advanced"
+subtitle: "TEMPLATE"
+author: "Florian Oswald"
+date: "SciencesPo Paris </br> `r Sys.Date()`"
+output:
+  xaringan::moon_reader:
+    lib_dir: libs
+    css: [default, "../../css/scpo.css", "../../css/scpo-fonts.css"]
+    nature:
+      beforeInit: ["../../js/ru_xaringan.js"]
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+      ratio: "16:9"
+    includes:
+      in_header: ["../../libs/partials/header.html"]
+---
+
+layout: true
+
+<div class="my-footer"><img src="../../img/logo/ScPo-shield.png" style="height: 60px;"/></div> 
+
+---
+
+```{r setup, include=FALSE,warning=FALSE,message=FALSE}
+options(htmltools.dir.version = FALSE)
+knitr::opts_chunk$set(
+  message = FALSE,
+  warning = FALSE,
+  dev = "svg",
+  cache = TRUE,
+  fig.align = "center"
+  #fig.width = 11,
+  #fig.height = 5
+)
+
+# define vars
+om = par("mar")
+lowtop = c(om[1],om[2],0.1,om[4])
+library(magrittr)
+
+```
+
+# Where Did We Stop Last Week?
+
+.pull-left[
+* Last week we learned about *sampling distributions*
+
+* We took repeated samples from a population (Fusilli or plastic balls) and computed an **estimate** of the sample proportion $\hat{p}$ over and over again
+
+* We took 1000 (!) samples and looked how the sampling distribution evolved as we increased sample sizes from $n=25$ to $n=100$. 
+
+* Our estimates became *more precise* as $n$ increased. 
+
+]
+
+--
+
+.pull-right[
+* We introduced notation: 
+    * population size $N$, 
+    * *point estimate* (like $\hat{p}$), 
+    * standard error *of* an estimate
+
+* We said *random sampling produces **unbiased** estimates*.
+
+* Our sample statistics provided **good guesses** about the true population parameters of interest.
+]
+
+
+---
+
+
+---
+layout: false
+class: separator, middle
+
+# SEPARATOR
+
+
+
+---
+layout: true
+
+<div class="my-footer"><img src="../img/logo/ScPo-shield.png" style="height: 60px;"/></div> 
+
+---
+
+# next slide
+
+
+---
+
+
+class: title-slide-final, middle
+background-image: url(../img/logo/ScPo-econ.png)
+background-size: 250px
+background-position: 9% 19%
+
+# END
+
+
+
+
+|                                                                                                            |                                   |
+| :--------------------------------------------------------------------------------------------------------- | :-------------------------------- |
+| <a href="mailto:florian.oswald@sciencespo.fr">.ScPored[<i class="fa fa-paper-plane fa-fw"></i>]               | florian.oswald@sciencespo.fr       |
+| <a href="https://github.com/ScPoEcon/Advanced-Metrics-slides">.ScPored[<i class="fa fa-link fa-fw"></i>] | Slides |
+| <a href="https://scpoecon.github.io/ScPoEconometrics">.ScPored[<i class="fa fa-link fa-fw"></i>] | Book |
+| <a href="http://twitter.com/ScPoEcon">.ScPored[<i class="fa fa-twitter fa-fw"></i>]                          | @ScPoEcon                         |
+| <a href="http://github.com/ScPoEcon">.ScPored[<i class="fa fa-github fa-fw"></i>]                          | @ScPoEcon                       |
+

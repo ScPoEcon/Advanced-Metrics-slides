@@ -210,13 +210,13 @@ blockquote {
 /*~~~~~~~~~~~~~~~~~~*/
 
 /* section divider red */
-.title-slide-section-red {
+.separator {
   background-color: #d90502;
   padding-left: 100px;  /* delete this for 4:3 aspect ratio */
 }
 
 /* section divider red H1 fonts */
-.title-slide-section-red h1, .title-slide-section-red h2, .title-slide-section-red h3, .title-slide-section-red p {
+.separator h1, .separator h2, .separator h3, .separator p {
   color: #fff;
 }
 
@@ -270,6 +270,11 @@ strong {
 
 .ScPored {
   color: #d90502;
+}
+
+/* Pink text */
+.red {
+  color: #d90502 !important;
 }
 
 /* Add blue tag */
@@ -329,3 +334,58 @@ ru-blockquote {
 
 .large { font-size: 120% }
 .small { font-size: 90% }
+
+.super{
+  vertical-align: super;
+  font-size: 70%;
+}
+.sub{
+  vertical-align: sub;
+  font-size: 70%;
+}
+
+/* Create a highlighted class called 'hi'  */
+.hi {
+  font-weight: 600;
+  color: #d90502 !important;
+}
+.hi-pink {
+  font-weight: 600;
+  color: #e64173 !important;
+}
+.hi-slate {
+  font-weight: 600;
+  color: #314f4f !important;
+}
+.hi-turquoise {
+  font-weight: 600;
+  color: #44C1C4 !important;
+}
+.hi-purple {
+  font-weight: 600;
+  color: #6A5ACD !important;
+}
+.hi-orange {
+  font-weight: 600;
+  color: #FFA500 !important;
+}
+.hi-yellow{
+  font-weight: 600;
+  color: #D8BD44 !important;
+}
+.hi-green {
+  font-weight: 600;
+  color: #7CAE96 !important;
+}
+.hi-grey {
+  font-weight: 600;
+  color: #8AA19E !important;
+}
+.hi-blue {
+  font-weight: 600;
+  color: #54778B !important;
+}
+.hi-red {
+  font-weight: 600;
+  color: #fb6107 !important;
+}
