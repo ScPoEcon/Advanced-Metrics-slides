@@ -4,18 +4,20 @@
     <title>ScPoEconometrics Advanced</title>
     <meta charset="utf-8" />
     <meta name="author" content="Florian Oswald" />
+    <script src="libs/header-attrs/header-attrs.js"></script>
     <link href="libs/remark-css/default.css" rel="stylesheet" />
     <script src="https://use.fontawesome.com/5235085b15.js"></script>
-    
+
     <!-- Global site tag (gtag.js) - Google Analytics -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=UA-41584331-6"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
-    
+
       gtag('config', 'UA-41584331-6');
     </script>
+
     <link rel="stylesheet" href="../../css/scpo.css" type="text/css" />
     <link rel="stylesheet" href="../../css/scpo-fonts.css" type="text/css" />
   </head>
@@ -26,7 +28,7 @@ class: center, middle, inverse, title-slide
 # ScPoEconometrics Advanced
 ## Recap 2
 ### Florian Oswald
-### SciencesPo Paris </br> 2020-09-10
+### SciencesPo Paris </br> 2020-09-18
 
 ---
 
@@ -211,7 +213,6 @@ Biased regression estimate: `\(\widehat{\text{Pay}}_i = 31.3 + -0.9 \times \text
 &lt;img src="recap2_files/figure-html/plot ovb 2-1.svg" style="display: block; margin: auto;" /&gt;
 
 ---
----
 count: false
 Recalling the omitted variable: Gender **female** and .hi-slate[male]
 
@@ -263,7 +264,7 @@ layout: false
 
 ---
 layout: false
-class: title-slide-section-red, middle
+class: separator, middle
 
 # Interpreting coefficients
 
@@ -451,21 +452,48 @@ Similarly, `\(\beta_1\)` gives the expected return to an additional year of scho
 
 In economics, you will frequently see logged outcome variables with linear (non-logged) explanatory variables, _e.g._,
 
-$$ \log(\text{Pay}_i) = \beta_0 + \beta_1 \, \text{School}_i + u_i $$
+$$ \log(\text{price}_i) = \beta_0 + \beta_1  \text{bdrms}_i + u_i $$
 
 This specification changes our interpretation of the slope coefficients.
 
-**Interpretation**
 
-- A one-unit increase in our explanatory variable increases the outcome variable by approximately `\(\beta_1\times 100\)` percent.
+```r
+data(hprice1,package = "wooldridge")
+lm(log(price) ~ bdrms, data = hprice1) %&gt;% tidy()
+```
 
-- *Example:* An additional year of schooling increases pay by approximately 3 percent (for `\(\beta_1 = 0.03\)`).
+```
+#&gt; # A tibble: 2 x 5
+#&gt;   term        estimate std.error statistic  p.value
+#&gt;   &lt;chr&gt;          &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;    &lt;dbl&gt;
+#&gt; 1 (Intercept)    5.04     0.126      39.9  3.13e-57
+#&gt; 2 bdrms          0.167    0.0345      4.85 5.43e- 6
+```
+
+
 
 ---
 # Interpreting coefficients
 ## Log-linear specification
 
-**Derivation**
+.pull-left[
+
+**Interpretation**
+
+- A one-unit increase in our explanatory variable increases the outcome variable by *approximately* `\(\beta_1\times 100\)` percent.
+
+- *Example:* An additional bedroom increases sales prices of a house by *approximately* 16 percent (for `\(\beta_1 = 0.16\)`).
+
+]
+
+.pull-right[
+&lt;img src="recap2_files/figure-html/unnamed-chunk-4-1.svg" style="display: block; margin: auto;" /&gt;
+]
+
+---
+# Interpreting coefficients
+## Log-linear specification
+
 
 Consider the log-linear model
 
@@ -481,21 +509,65 @@ So a marginal change in `\(x\)` (_i.e._, `\(dx\)`) leads to a `\(\beta_1 dx\)` *
 # Interpreting coefficients
 ## Log-linear specification
 
-Because the log-linear specification comes with a different interpretation, you need to make sure it fits your data-generating process/model.
+What about that **approximation** part?
 
-Does `\(x\)` change `\(y\)` in levels (_e.g._, a 3-unit increase) or percentages (_e.g._, a 10-percent increase)?
+&gt; An additional bedroom increases sales prices of a house by *approximately* 16 percent (for `\(\beta_1 = 0.16\)`).
+
+.pull-left[
+
+* `\(\% \Delta y \approx 0.16 \times 100 = 16\%\)`.
+
+* Good approximation as long as `\(\Delta y\)` is not too big.
+
+* We approximate 
+    `$$\log\left(\frac{\Delta y}{y_0} + 1 \right) \approx \frac{\Delta y}{y_0}$$`
+    
+
+
+]
 
 --
 
-_I.e._, you need to be sure an exponential relationship makes sense:
+.pull-right[
 
-$$ \log(y_i) = \beta_0 + \beta_1 \, x_i + u_i \iff y_i = e^{\beta_0 + \beta_1 x_i + u_i} $$
+&lt;img src="recap2_files/figure-html/unnamed-chunk-5-1.svg" style="display: block; margin: auto;" /&gt;
+
+
+]
 
 ---
 # Interpreting coefficients
 ## Log-linear specification
 
-&lt;img src="recap2_files/figure-html/log linear plot-1.svg" style="display: block; margin: auto;" /&gt;
+What about that **approximation** part?
+
+&gt; An additional bedroom increases sales prices of a house by *approximately* 16 percent (for `\(\beta_1 = 0.16\)`).
+
+.pull-left[
+
+* `\(\% \Delta y \approx 0.16 \times 100 = 16\%\)`.
+
+* Good approximation as long as `\(\Delta y\)` is not too big.
+
+* We approximate 
+    `$$\log\left(\frac{\Delta y}{y_0} + 1 \right) \approx \frac{\Delta y}{y_0}$$`
+    
+
+
+]
+
+
+.pull-right[
+
+* The **exact** formula is
+    `$$\% \Delta y = 100 \times \left(\exp\left(\Delta x\beta\right) - 1 \right)$$`
+    
+* In our case:
+    `$$\% \Delta y = 100 \times \left(\exp\left(0.16\right) - 1 \right) = 17.3$$`
+
+
+]
+
 
 
 ---
@@ -504,7 +576,7 @@ $$ \log(y_i) = \beta_0 + \beta_1 \, x_i + u_i \iff y_i = e^{\beta_0 + \beta_1 x_
 
 Similarly, econometricians frequently employ log-log models, in which the outcome variable is logged *and* at least one explanatory variable is logged
 
-$$ \log(\text{Pay}_i) = \beta_0 + \beta_1 \, \log(\text{School}_i) + u_i $$
+$$ \log(\text{price}_i) = \beta_0 + \beta_1 \, \log(\text{sqrft}_i) + u_i $$
 
 **Interpretation:**
 
@@ -515,7 +587,6 @@ $$ \log(\text{Pay}_i) = \beta_0 + \beta_1 \, \log(\text{School}_i) + u_i $$
 # Interpreting coefficients
 ## Log-log specification
 
-**Derivation**
 
 Consider the log-log model
 
@@ -531,83 +602,98 @@ $$ \dfrac{dy}{dx} \dfrac{x}{y} = \beta_1 $$
 
 ---
 # Interpreting coefficients
+## Log-log specification
+
+
+.pull-left[
+
+```r
+lm(log(price) ~ log(sqrft), data = hprice1) %&gt;% tidy()
+```
+
+```
+#&gt; # A tibble: 2 x 5
+#&gt;   term        estimate std.error statistic  p.value
+#&gt;   &lt;chr&gt;          &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;    &lt;dbl&gt;
+#&gt; 1 (Intercept)   -0.975    0.641      -1.52 1.32e- 1
+#&gt; 2 log(sqrft)     0.873    0.0846     10.3  1.05e-16
+```
+]
+
+.pull-right[
+
+* a 1% increase in square footage of the house leads to a 0.873% increase in sales price.
+
+* Notice the absence of *units* here (it's all in **percent** terms of both variables involved).
+
+]
+
+---
+# Interpreting coefficients
 ## Log-linear with a binary variable
 
 **Note:** If you have a log-linear model with a binary indicator variable, the interpretation for the coefficient on that variable changes.
 
-Consider
+Consider again
 
 $$ \log(y_i) = \beta_0 + \beta_1 x_1 + u_i $$
 
 for binary variable `\(x_1\)`.
 
-The interpretation of `\(\beta_1\)` is now
+The *approximate* interpretation of `\(\beta_1\)` is as before:
 
-- When `\(x_1\)` changes from 0 to 1, `\(y\)` will change by `\(100 \times \left( e^{\beta_1} -1 \right)\)` percent.
-- When `\(x_1\)` changes from 1 to 0, `\(y\)` will change by `\(100 \times \left( e^{-\beta_1} -1 \right)\)` percent.
+&gt;When `\(x_1\)` changes from 0 to 1, `\(y\)` will change by `\(100 \times \beta_1\)` percent.
 
-
----
-# Interpreting coefficients
-## Log-log specification
-
-&lt;img src="recap2_files/figure-html/log log plot-1.svg" style="display: block; margin: auto;" /&gt;
 
 ---
-layout: true
-# Additional topics
 
----
-class: inverse, middle
 
----
-## Inference *vs.* prediction
+```
+#&gt; 
+#&gt; Call:
+#&gt; lm(formula = log(price) ~ log(lotsize) + log(sqrft) + bdrms + 
+#&gt;     colonial, data = hprice1)
+#&gt; 
+#&gt; Residuals:
+#&gt;      Min       1Q   Median       3Q      Max 
+#&gt; -0.69479 -0.09750 -0.01619  0.09151  0.70228 
+#&gt; 
+#&gt; Coefficients:
+#&gt;              Estimate Std. Error t value Pr(&gt;|t|)    
+#&gt; (Intercept)  -1.34959    0.65104  -2.073   0.0413 *  
+#&gt; log(lotsize)  0.16782    0.03818   4.395 3.25e-05 ***
+#&gt; log(sqrft)    0.70719    0.09280   7.620 3.69e-11 ***
+#&gt; bdrms         0.02683    0.02872   0.934   0.3530    
+#&gt; colonial      0.05380    0.04477   1.202   0.2330    
+#&gt; ---
+#&gt; Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+#&gt; 
+#&gt; Residual standard error: 0.1841 on 83 degrees of freedom
+#&gt; Multiple R-squared:  0.6491,	Adjusted R-squared:  0.6322 
+#&gt; F-statistic: 38.38 on 4 and 83 DF,  p-value: &lt; 2.2e-16
+```
 
-So far, we've focused mainly **statistical inference**—using estimators and their distributions properties to try to learn about underlying, unknown population parameters.
+.pull-left[
 
-$$ y\_i = \color{#e64173}{\hat{\beta}\_{0}} + \color{#e64173}{\hat{\beta\_1}} \, x\_{1i} + \color{#e64173}{\hat{\beta\_2}} \, x\_{2i} + \cdots + \color{#e64173}{\hat{\beta}\_{k}} \, x\_{ki} + e\_i $$
+**Approximate**
 
---
+- When `\(x_1\)` changes from 0 to 1 (i.e. house *becomes* colonial), `\(y\)` will change by `\(100 \times \beta_1  = 5.37\)` percent.
 
-**Prediction** includes a fairly different set of topics/tools within econometrics (and data science/machine learning)—creating models that accurately estimate individual observations.
-
-$$ \color{#e64173}{\hat{y}\_i} = \mathop{\hat{f}}\left( x_1,\, x_2,\, \ldots x_k \right) $$
-
----
-## Inference *vs.* prediction
-
-Succinctly
-
-- **Inference:** causality, `\(\hat{\beta}_k\)` (consistent and efficient), standard errors/hypothesis tests for `\(\hat{\beta}_k\)`, generally OLS
-
-- **Prediction:**&lt;sup&gt;.pink[†]&lt;/sup&gt; correlation, `\(\hat{y}_i\)` (low error), model selection, nonlinear models are much more common
-
-.footnote[
-.pink[†] Includes forecasting.
 ]
 
----
-## Treatment effects and causality
+.pull-right[
 
-Much of modern (micro)econometrics focuses on causally estimating (*identifying*) the effect of programs/policies, _e.g._,
+**Exact**
 
-- [Government shutdowns](https://www.sciencedirect.com/science/article/pii/S004727271830118X)
-- [The minimum wage](https://www.jstor.org/stable/2118030)
-- [Recreational-cannabis legalization](https://pages.uoregon.edu/bchansen/working.html)
-- [Salary-history bans](http://www.drewmcnichols.com/research)
-- [Preschool](https://amstat.tandfonline.com/doi/abs/10.1198/016214508000000841#.XD4PVy2ZNO4)
-- [The Clean Water Act](https://academic.oup.com/qje/article-abstract/134/1/349/5092609)
 
---
+- When `\(x_1\)` changes from 1 to 0, `\(y\)` will change by `\(100 \times \left( e^{\beta_1} -1 \right) = 5.52\)` percent.
 
-In this literature, the program is often a binary variable, and we place high importance on finding an unbiased estimate for the program's effect, `\(\hat{\tau}\)`.
-
-$$ \text{Outcome}_i = \beta_0 + \tau \, \text{Program}_i + u_i $$
+]
 
 ---
 layout: false
 class: title-slide-final, middle
-background-image: url(../img/logo/ScPo-econ.png)
+background-image: url(../../img/logo/ScPo-econ.png)
 background-size: 250px
 background-position: 9% 19%
 
@@ -623,6 +709,9 @@ background-position: 9% 19%
 | &lt;a href="https://scpoecon.github.io/ScPoEconometrics"&gt;.ScPored[&lt;i class="fa fa-link fa-fw"&gt;&lt;/i&gt;] | Book |
 | &lt;a href="http://twitter.com/ScPoEcon"&gt;.ScPored[&lt;i class="fa fa-twitter fa-fw"&gt;&lt;/i&gt;]                          | @ScPoEcon                         |
 | &lt;a href="http://github.com/ScPoEcon"&gt;.ScPored[&lt;i class="fa fa-github fa-fw"&gt;&lt;/i&gt;]                          | @ScPoEcon                       |
+
+
+
     </textarea>
 <style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
 <script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>

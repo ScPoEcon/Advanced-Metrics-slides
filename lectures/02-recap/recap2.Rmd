@@ -762,15 +762,36 @@ Similarly, $\beta_1$ gives the expected return to an additional year of schoolin
 
 In economics, you will frequently see logged outcome variables with linear (non-logged) explanatory variables, _e.g._,
 
-$$ \log(\text{Pay}_i) = \beta_0 + \beta_1 \, \text{School}_i + u_i $$
+$$ \log(\text{price}_i) = \beta_0 + \beta_1  \text{bdrms}_i + u_i $$
 
 This specification changes our interpretation of the slope coefficients.
 
+```{r,echo = TRUE}
+data(hprice1,package = "wooldridge")
+lm(log(price) ~ bdrms, data = hprice1) %>% tidy()
+```
+
+
+
+---
+# Interpreting coefficients
+## Log-linear specification
+
+.pull-left[
+
 **Interpretation**
 
-- A one-unit increase in our explanatory variable increases the outcome variable by approximately $\beta_1\times 100$ percent.
+- A one-unit increase in our explanatory variable increases the outcome variable by *approximately* $\beta_1\times 100$ percent.
 
-- *Example:* An additional year of schooling increases pay by approximately 3 percent (for $\beta_1 = 0.03$).
+- *Example:* An additional bedroom increases sales prices of a house by *approximately* 16 percent (for $\beta_1 = 0.16$).
+
+]
+
+.pull-right[
+```{r,fig.height=7}
+ggplot(hprice1, aes(bdrms,y = log(price))) + geom_point() + geom_smooth(method = "lm") + theme_bw()
+```
+]
 
 ---
 # Interpreting coefficients
@@ -791,40 +812,68 @@ So a marginal change in $x$ (_i.e._, $dx$) leads to a $\beta_1 dx$ **percentage 
 # Interpreting coefficients
 ## Log-linear specification
 
-Because the log-linear specification comes with a different interpretation, you need to make sure it fits your data-generating process/model.
+What about that **approximation** part?
 
-Does $x$ change $y$ in levels (_e.g._, a 3-unit increase) or percentages (_e.g._, a 10-percent increase)?
+> An additional bedroom increases sales prices of a house by *approximately* 16 percent (for $\beta_1 = 0.16$).
+
+.pull-left[
+
+* $\% \Delta y \approx 0.16 \times 100 = 16\%$.
+
+* Good approximation as long as $\Delta y$ is not too big.
+
+* We approximate 
+    $$\log\left(\frac{\Delta y}{y_0} + 1 \right) \approx \frac{\Delta y}{y_0}$$
+    
+
+
+]
 
 --
 
-_I.e._, you need to be sure an exponential relationship makes sense:
+.pull-right[
 
-$$ \log(y_i) = \beta_0 + \beta_1 \, x_i + u_i \iff y_i = e^{\beta_0 + \beta_1 x_i + u_i} $$
+```{r,fig.height=5}
+d = data.frame(x = c(0,3))
+ggplot(d) + stat_function(fun = function(z){log(1 + z)}) + stat_function(fun = function(z){z}, linetype = "dashed") + scale_x_continuous(name = "Delta y / y0") + theme_bw()
+```
+
+
+]
 
 ---
 # Interpreting coefficients
 ## Log-linear specification
 
-```{R, log linear plot, echo = F, cache = T, dev = "svg", fig.height = 4}
-# Set seed
-set.seed(1234)
-# Sample size
-n <- 1e3
-# Generate data
-ll_df <- tibble(
-  x = runif(n, 0, 3),
-  y = exp(-100 + 0.75 * x + rnorm(n, sd = 0.5))
-)
-# Plot
-ggplot(data = ll_df, aes(x = x, y = y)) +
-geom_hline(yintercept = 0) +
-geom_vline(xintercept = 0) +
-geom_point(size = 3, color = "darkslategrey", alpha = 0.5) +
-geom_smooth(color = scpo_red, se = F) +
-xlab("x") +
-ylab("y") +
-theme_axes
-```
+What about that **approximation** part?
+
+> An additional bedroom increases sales prices of a house by *approximately* 16 percent (for $\beta_1 = 0.16$).
+
+.pull-left[
+
+* $\% \Delta y \approx 0.16 \times 100 = 16\%$.
+
+* Good approximation as long as $\Delta y$ is not too big.
+
+* We approximate 
+    $$\log\left(\frac{\Delta y}{y_0} + 1 \right) \approx \frac{\Delta y}{y_0}$$
+    
+
+
+]
+
+
+.pull-right[
+
+* The **exact** formula is
+    $$\% \Delta y = 100 \times \left(\exp\left(\Delta x\beta\right) - 1 \right)$$
+    
+* In our case:
+    $$\% \Delta y = 100 \times \left(\exp\left(0.16\right) - 1 \right) = 17.3$$
+
+
+]
+
 
 
 ---
@@ -833,7 +882,7 @@ theme_axes
 
 Similarly, econometricians frequently employ log-log models, in which the outcome variable is logged *and* at least one explanatory variable is logged
 
-$$ \log(\text{Pay}_i) = \beta_0 + \beta_1 \, \log(\text{School}_i) + u_i $$
+$$ \log(\text{price}_i) = \beta_0 + \beta_1 \, \log(\text{sqrft}_i) + u_i $$
 
 **Interpretation:**
 
@@ -859,97 +908,62 @@ $$ \dfrac{dy}{dx} \dfrac{x}{y} = \beta_1 $$
 
 ---
 # Interpreting coefficients
+## Log-log specification
+
+
+.pull-left[
+```{r,echo = TRUE}
+lm(log(price) ~ log(sqrft), data = hprice1) %>% tidy()
+```
+]
+
+.pull-right[
+
+* a 1% increase in square footage of the house leads to a 0.873% increase in sales price.
+
+* Notice the absence of *units* here (it's all in **percent** terms of both variables involved).
+
+]
+
+---
+# Interpreting coefficients
 ## Log-linear with a binary variable
 
 **Note:** If you have a log-linear model with a binary indicator variable, the interpretation for the coefficient on that variable changes.
 
-Consider
+Consider again
 
 $$ \log(y_i) = \beta_0 + \beta_1 x_1 + u_i $$
 
 for binary variable $x_1$.
 
-The interpretation of $\beta_1$ is now
+The *approximate* interpretation of $\beta_1$ is as before:
 
-- When $x_1$ changes from 0 to 1, $y$ will change by $100 \times \left( e^{\beta_1} -1 \right)$ percent.
-- When $x_1$ changes from 1 to 0, $y$ will change by $100 \times \left( e^{-\beta_1} -1 \right)$ percent.
+>When $x_1$ changes from 0 to 1, $y$ will change by $100 \times \beta_1$ percent.
 
 
 ---
-# Interpreting coefficients
-## Log-log specification
 
-```{R, log log plot, echo = F, cache = T, dev = "svg", fig.height = 4}
-# Set seed
-set.seed(1234)
-# Sample size
-n <- 1e3
-# Generate data
-log_df <- tibble(
-  x = runif(n, 0, 10),
-  y = exp(3 * log(x) + rnorm(n, sd = 0.5))
-)
-# Plot
-ggplot(data = log_df, aes(x = x, y = y)) +
-geom_hline(yintercept = 0) +
-geom_vline(xintercept = 0) +
-geom_point(size = 3, color = "darkslategrey", alpha = 0.5) +
-geom_smooth(color = scpo_red, se = F) +
-xlab("x") +
-ylab("y") +
-theme_axes
+```{r}
+lm(log(price) ~ log(lotsize) + log(sqrft) + bdrms + colonial, hprice1) %>% summary()
 ```
 
----
-layout: true
-# Additional topics
+.pull-left[
 
----
-class: inverse, middle
+**Approximate**
 
----
-## Inference *vs.* prediction
+- When *colonial* changes from 0 to 1 (i.e. house *becomes* colonial), $y$ will change by $100 \times \beta_1  = 5.37$ percent.
 
-So far, we've focused mainly **statistical inference**—using estimators and their distributions properties to try to learn about underlying, unknown population parameters.
-
-$$ y\_i = \color{#e64173}{\hat{\beta}\_{0}} + \color{#e64173}{\hat{\beta\_1}} \, x\_{1i} + \color{#e64173}{\hat{\beta\_2}} \, x\_{2i} + \cdots + \color{#e64173}{\hat{\beta}\_{k}} \, x\_{ki} + e\_i $$
-
---
-
-**Prediction** includes a fairly different set of topics/tools within econometrics (and data science/machine learning)—creating models that accurately estimate individual observations.
-
-$$ \color{#e64173}{\hat{y}\_i} = \mathop{\hat{f}}\left( x_1,\, x_2,\, \ldots x_k \right) $$
-
----
-## Inference *vs.* prediction
-
-Succinctly
-
-- **Inference:** causality, $\hat{\beta}_k$ (consistent and efficient), standard errors/hypothesis tests for $\hat{\beta}_k$, generally OLS
-
-- **Prediction:**<sup>.pink[†]</sup> correlation, $\hat{y}_i$ (low error), model selection, nonlinear models are much more common
-
-.footnote[
-.pink[†] Includes forecasting.
 ]
 
----
-## Treatment effects and causality
+.pull-right[
 
-Much of modern (micro)econometrics focuses on causally estimating (*identifying*) the effect of programs/policies, _e.g._,
+**Exact**
 
-- [Government shutdowns](https://www.sciencedirect.com/science/article/pii/S004727271830118X)
-- [The minimum wage](https://www.jstor.org/stable/2118030)
-- [Recreational-cannabis legalization](https://pages.uoregon.edu/bchansen/working.html)
-- [Salary-history bans](http://www.drewmcnichols.com/research)
-- [Preschool](https://amstat.tandfonline.com/doi/abs/10.1198/016214508000000841#.XD4PVy2ZNO4)
-- [The Clean Water Act](https://academic.oup.com/qje/article-abstract/134/1/349/5092609)
 
---
+- When *colonial* changes from 1 to 0, $y$ will change by $100 \times \left( e^{\beta_1} -1 \right) = 5.52$ percent.
 
-In this literature, the program is often a binary variable, and we place high importance on finding an unbiased estimate for the program's effect, $\hat{\tau}$.
-
-$$ \text{Outcome}_i = \beta_0 + \tau \, \text{Program}_i + u_i $$
+]
 
 ---
 layout: false
