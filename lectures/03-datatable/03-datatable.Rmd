@@ -1,7 +1,7 @@
 ---
 title: "Guest Lecture"
 # subtitle: "<html><div style='float:left'></div><hr color='#EB811B' size=1px width=796px></html>"
-subtitle: "Lecture 5: Data cleaning & wrangling: (2) data.table"
+subtitle: "Data cleaning & wrangling: data.table"
 author: "Grant McDermott"
 date: "University of Oregon | [EC 607](https://github.com/uo-ec607)" #"`r format(Sys.time(), '%d %B %Y')`"
 output:
@@ -265,28 +265,29 @@ To create a data.table, we have a couple of options:
 
 ---
 
-# What does "modify by reference" mean?
+# data.table Basics
 
-That last bullet leads us to an important concept that underlies much of data.table's awesomeness: It tries, as much as possible, to *modify by reference*.
+* The [introduction to `data.table` vignette](https://cran.r-project.org/web/packages/data.table/vignettes/datatable-intro.html) is a very good place to start.
+ 
+--
+
+* So, a `data.table` is an *enhanced data.frame*:
+    ```{r}
+    DT = data.table(a = 1:10)
+    class(DT)
+    ```
+    *enhanced* means that you can do *more* with it than just store and access data (as with a `data.frame`). And much more efficiently as well.
 
 --
 
-What does this mean? 
-
---
-We don't have time to go into details here, but the very (very) short version is that there are basically two ways of changing or assigning objects in R.
-1. **Copy-on-modify:** Creates a copy of your data. Implies extra computational overhead.<sup>*</sup>
-2. **Modify-in-place:** Avoids creating copies and simply changes the data where it sits in memory. 
-
-.footnote[<sup>*</sup> In truth, we need to distinguish between <i>shallow</i> and <i>deep copies</i>. But that's more than I want you to worry about here.]
+* A `data.table` is also a `list`:
+    ```{r}
+    is.list(DT)
+    ```
 
 --
 
-When we say that data.table "modifies by reference", that essentially means it modifies objects in place. This translates to lower memory overhead and faster computation time!
-
---
-
-P.S. Further reading if this stuff interests you: (a) [Reference semantics](https://rdatatable.gitlab.io/data.table/articles/datatable-reference-semantics.html) data.table vignette, (b) [Names and Values](https://adv-r.hadley.nz/names-values.html) section of *Advanced R* (Hadley Wickham), (c) Nice [blog post](https://tysonbarrett.com//jekyll/update/2019/07/12/datatable/) by Tyson Barrett that's accessible to beginners.
+* Great. How do I use it?!
 
 ---
 
@@ -477,6 +478,15 @@ starwars_dt[
 class: inverse, center, middle
 name: i
 
+# What is a data.table?
+<html><div style='float:left'></div><hr color='#EB811B' size=1px width=796px></html>
+
+
+
+---
+class: inverse, center, middle
+name: i
+
 # Working with rows: DT[i, ]
 <html><div style='float:left'></div><hr color='#EB811B' size=1px width=796px></html>
 
@@ -536,6 +546,17 @@ starwars_dt[1:5, name:birth_year] ## Only print subset to stay on the slide
 ```
 
 ---
+
+# Helper function: `%like%`
+
+* We have handy helper functions `%like%`, `%ilike%`, `%llike%`
+* Say we want to get all `name`s with a *sky* in them:
+
+```{r}
+starwars_dt[name %like% "Sky",.(name,height,mass)]
+```
+
+---
 class: inverse, center, middle
 name: j
 
@@ -568,7 +589,7 @@ However, this concision requires a few syntax tweaks w.r.t. how we change and as
 
 ---
 
-# Modifying columns :=
+# Modifying columns `:=`
 
 To add, delete, or change columns in data.table, we use the **`:=`** operator.
 - Known as the *walrus* operator (geddit??)
@@ -596,7 +617,7 @@ DT[, x_sq := x^2][] ## Adding [] prints the result.
 
 ---
 
-# Modifying columns := (cont.)
+# Modifying columns `:=` (cont.)
 
 
 As I keep saying, *modifying by reference* has important implications for data manipulation. Consider what happens if we copy our data.table and then remove a column.
@@ -635,7 +656,7 @@ DT ## x_sq is still there (run and confirm for yourself)
 
 ---
 
-# Modifying columns := (cont.)
+# Modifying columns `:=` (cont.)
 
 ### Sub-assign by reference
 
@@ -660,6 +681,80 @@ Now, imagine we want to locate all rows where "a" is negative and replace the co
 DT2[a < 0, b := NA][] ## Again, just adding the second [] to print to screen
 ```
 
+---
+
+# Modifying columns `:=` (cont.)
+
+### Sub-assign by reference
+
+* the recently added `fcase` function is similar to the dplyr `ifelse`.
+* Makes it easy (and efficient) to add new categories by reference
+
+```{r}
+starwars_dt[ , eye_cat := fcase(
+  eye_color %chin% c("black","blue-gray","brown","dark","hazel"), "dark",
+  eye_color %chin% c("blue","gold","green, yellow","orange","pink",
+                     "red","red, blue"), "funky",
+  eye_color %chin% c("white","yellow"), "light"
+)]
+
+starwars_dt[,.(eye_color, eye_cat, name)]
+```
+
+---
+
+# Modifying columns `:=` (cont.)
+
+### Sub-assign by reference on Subset
+
+* The same works on a subset of the data only:
+
+```{r}
+starwars_dt[ sex %in% c("male","none") , eye_cat_m := fcase(
+  eye_color %chin% c("black","blue-gray","brown","dark","hazel"), "dark",
+  eye_color %chin% c("blue","gold","green, yellow","orange","pink",
+                     "red","red, blue"), "funky",
+  eye_color %chin% c("white","yellow"), "light"
+)]
+
+head(starwars_dt[,.(eye_color, eye_cat, eye_cat_m,name)],n=6)
+```
+---
+
+# Modifying columns: Benchmark
+
+```{r}
+mod_dplyr <- function(){
+  starwars %>%
+    mutate(eye_cat_m = case_when(
+      sex %in% c("male","none") ~ ifelse(
+        eye_color %in% c("black","blue-gray","brown","dark","hazel"),"dark",
+          ifelse(eye_color %in% c("blue","gold","green, yellow","orange","pink",
+                     "red","red, blue"), "funky",
+                 ifelse(c("white","yellow"), "light", NA)
+          )
+        ), 
+      sex == "female" ~ NA_character_)
+    )
+}
+
+mod_dt <- function(){
+  starwars_dt[ sex %in% c("male","none") , eye_cat_m := fcase(
+  eye_color %chin% c("black","blue-gray","brown","dark","hazel"), "dark",
+  eye_color %chin% c("blue","gold","green, yellow","orange","pink",
+                     "red","red, blue"), "funky",
+  eye_color %chin% c("white","yellow"), "light"
+)]
+}
+```
+
+---
+
+# Modifying columns: Benchmark
+
+```{r}
+microbenchmark(mod_dplyr(), mod_dt(), times = 10)
+```
 
 ---
 
@@ -673,10 +768,10 @@ To modify multiple columns simultaneously, we have two options.
 
 --
 
-Personally, I *much* prefer the functional form and so that's what I'll use going forward. E.g.
+Personally, I *much* prefer the first form and so that's what I'll use going forward. E.g.
 
 ```{r mod_cols, cache=FALSE}
-DT[, ':=' (y = 3:4, y_name = c("three", "four"))]
+DT[, c("y", "y_name") :=  list(3:4 , c("three", "four"))]
 DT ## Another way to print the results instead of appending []
 ```
 
@@ -1314,6 +1409,42 @@ stocks_long %>%
                  values_from=price)
 ```
 ]]
+
+---
+
+# Reshaping multiple columns
+
+* In this [vignette](https://cran.r-project.org/web/packages/data.table/vignettes/datatable-reshape.html) you have a bunch more examples of efficient reshapes with data.table
+* One of my favourites is the ability to reshape *several* columns at once.
+
+.small90[
+```{r,echo = FALSE}
+s2 <- "family_id age_mother dob_child1 dob_child2 dob_child3 gender_child1 gender_child2 gender_child3
+1         30 1998-11-26 2000-01-29         NA             1             2            NA
+2         27 1996-06-22         NA         NA             2            NA            NA
+3         26 2002-07-11 2004-04-05 2007-09-02             2             2             1
+4         32 2004-10-10 2009-08-27 2012-07-21             1             1             1
+5         29 2000-12-05 2005-02-28         NA             2             1            NA"
+```
+```{r}
+DT <- fread(s2)
+DT
+# melt
+colA = paste("dob_child", 1:3, sep = "")
+colB = paste("gender_child", 1:3, sep = "")
+DT.m2 = melt(DT, measure = list(colA, colB), 
+             value.name = c("dob", "gender"))
+```
+]
+---
+
+# Reshape
+
+```{r}
+DT.m2 = melt(DT, measure = patterns("^dob", "^gender"), value.name = c("dob", "gender"))
+DT.m2
+```
+
 
 ---
 name: tidyverse
