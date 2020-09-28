@@ -4,6 +4,7 @@
     <title>Guest Lecture</title>
     <meta charset="utf-8" />
     <meta name="author" content="Grant McDermott" />
+    <script src="libs/header-attrs/header-attrs.js"></script>
     <link href="libs/remark-css/default.css" rel="stylesheet" />
     <link href="libs/remark-css/metropolis.css" rel="stylesheet" />
     <link href="libs/remark-css/metropolis-fonts.css" rel="stylesheet" />
@@ -14,7 +15,7 @@
 class: center, middle, inverse, title-slide
 
 # Guest Lecture
-## Lecture 5: Data cleaning &amp; wrangling: (2) data.table
+## Data cleaning &amp; wrangling: data.table
 ### Grant McDermott
 ### University of Oregon | <a href="https://github.com/uo-ec607">EC 607</a>
 
@@ -178,12 +179,12 @@ microbenchmark(collapse_dplyr(), collapse_dt(), times = 10)
 
 ```
 ## Unit: milliseconds
-##              expr       min         lq       mean     median        uq
-##  collapse_dplyr() 151.00023 181.650330 237.423549 237.538265 273.00447
-##     collapse_dt()   2.30102   2.479375   8.602903   3.370573  12.42229
-##        max neval
-##  344.35735    10
-##   39.10508    10
+##              expr        min         lq       mean     median         uq
+##  collapse_dplyr() 136.862108 141.412963 156.997472 145.365396 155.390262
+##     collapse_dt()   1.573821   1.592804   2.663328   1.660133   1.847244
+##         max neval
+##  247.665423    10
+##    8.376309    10
 ```
 ]
 
@@ -275,28 +276,39 @@ To create a data.table, we have a couple of options:
 
 ---
 
-# What does "modify by reference" mean?
+# data.table Basics
 
-That last bullet leads us to an important concept that underlies much of data.table's awesomeness: It tries, as much as possible, to *modify by reference*.
+* The [introduction to `data.table` vignette](https://cran.r-project.org/web/packages/data.table/vignettes/datatable-intro.html) is a very good place to start.
+ 
+--
+
+* So, a `data.table` is an *enhanced data.frame*:
+    
+    ```r
+    DT = data.table(a = 1:10)
+    class(DT)
+    ```
+    
+    ```
+    ## [1] "data.table" "data.frame"
+    ```
+    *enhanced* means that you can do *more* with it than just store and access data (as with a `data.frame`). And much more efficiently as well.
 
 --
 
-What does this mean? 
-
---
-We don't have time to go into details here, but the very (very) short version is that there are basically two ways of changing or assigning objects in R.
-1. **Copy-on-modify:** Creates a copy of your data. Implies extra computational overhead.&lt;sup&gt;*&lt;/sup&gt;
-2. **Modify-in-place:** Avoids creating copies and simply changes the data where it sits in memory. 
-
-.footnote[&lt;sup&gt;*&lt;/sup&gt; In truth, we need to distinguish between &lt;i&gt;shallow&lt;/i&gt; and &lt;i&gt;deep copies&lt;/i&gt;. But that's more than I want you to worry about here.]
-
---
-
-When we say that data.table "modifies by reference", that essentially means it modifies objects in place. This translates to lower memory overhead and faster computation time!
+* A `data.table` is also a `list`:
+    
+    ```r
+    is.list(DT)
+    ```
+    
+    ```
+    ## [1] TRUE
+    ```
 
 --
 
-P.S. Further reading if this stuff interests you: (a) [Reference semantics](https://rdatatable.gitlab.io/data.table/articles/datatable-reference-semantics.html) data.table vignette, (b) [Names and Values](https://adv-r.hadley.nz/names-values.html) section of *Advanced R* (Hadley Wickham), (c) Nice [blog post](https://tysonbarrett.com//jekyll/update/2019/07/12/datatable/) by Tyson Barrett that's accessible to beginners.
+* Great. How do I use it?!
 
 ---
 
@@ -604,6 +616,25 @@ starwars_dt[1:5, name:birth_year] ## Only print subset to stay on the slide
 ```
 
 ---
+
+# Helper function: `%like%`
+
+* We have handy helper functions `%like%`, `%ilike%`, `%llike%`
+* Say we want to get all `name`s with a *sky* in them:
+
+
+```r
+starwars_dt[name %like% "Sky",.(name,height,mass)]
+```
+
+```
+##                name height mass
+## 1:   Luke Skywalker    172   77
+## 2: Anakin Skywalker    188   84
+## 3:   Shmi Skywalker    163   NA
+```
+
+---
 class: inverse, center, middle
 name: j
 
@@ -636,7 +667,7 @@ However, this concision requires a few syntax tweaks w.r.t. how we change and as
 
 ---
 
-# Modifying columns :=
+# Modifying columns `:=`
 
 To add, delete, or change columns in data.table, we use the **`:=`** operator.
 - Known as the *walrus* operator (geddit??)
@@ -671,7 +702,7 @@ DT[, x_sq := x^2][] ## Adding [] prints the result.
 
 ---
 
-# Modifying columns := (cont.)
+# Modifying columns `:=` (cont.)
 
 
 As I keep saying, *modifying by reference* has important implications for data manipulation. Consider what happens if we copy our data.table and then remove a column.
@@ -714,7 +745,7 @@ DT ## x_sq is still there (run and confirm for yourself)
 
 ---
 
-# Modifying columns := (cont.)
+# Modifying columns `:=` (cont.)
 
 ### Sub-assign by reference
 
@@ -750,6 +781,193 @@ DT2[a &lt; 0, b := NA][] ## Again, just adding the second [] to print to screen
 ## 5:  2    E
 ```
 
+---
+
+# Modifying columns `:=` (cont.)
+
+### Sub-assign by reference
+
+* the recently added `fcase` function is similar to the dplyr `ifelse`.
+* Makes it easy (and efficient) to add new categories by reference
+
+
+```r
+starwars_dt[ , eye_cat := fcase(
+  eye_color %chin% c("black","blue-gray","brown","dark","hazel"), "dark",
+  eye_color %chin% c("gold","green, yellow","orange","pink",
+                     "red","red, blue"), "funky",
+  eye_color %chin% c("blue","white","yellow"), "light"
+)]
+
+starwars_dt[,.(eye_color, eye_cat, name)]
+```
+
+```
+##         eye_color eye_cat                  name
+##  1:          blue   light        Luke Skywalker
+##  2:        yellow   light                 C-3PO
+##  3:           red   funky                 R2-D2
+##  4:        yellow   light           Darth Vader
+##  5:         brown    dark           Leia Organa
+##  6:          blue   light             Owen Lars
+##  7:          blue   light    Beru Whitesun lars
+##  8:           red   funky                 R5-D4
+##  9:         brown    dark     Biggs Darklighter
+## 10:     blue-gray    dark        Obi-Wan Kenobi
+## 11:          blue   light      Anakin Skywalker
+## 12:          blue   light        Wilhuff Tarkin
+## 13:          blue   light             Chewbacca
+## 14:         brown    dark              Han Solo
+## 15:         black    dark                Greedo
+## 16:        orange   funky Jabba Desilijic Tiure
+## 17:         hazel    dark        Wedge Antilles
+## 18:          blue   light      Jek Tono Porkins
+## 19:         brown    dark                  Yoda
+## 20:        yellow   light             Palpatine
+## 21:         brown    dark             Boba Fett
+## 22:           red   funky                 IG-88
+## 23:           red   funky                 Bossk
+## 24:         brown    dark      Lando Calrissian
+## 25:          blue   light                 Lobot
+## 26:        orange   funky                Ackbar
+## 27:          blue   light            Mon Mothma
+## 28:         brown    dark          Arvel Crynyd
+## 29:         brown    dark Wicket Systri Warrick
+## 30:         black    dark             Nien Nunb
+## 31:          blue   light          Qui-Gon Jinn
+## 32:           red   funky           Nute Gunray
+## 33:          blue   light         Finis Valorum
+## 34:        orange   funky         Jar Jar Binks
+## 35:        orange   funky          Roos Tarpals
+## 36:        orange   funky            Rugor Nass
+## 37:          blue   light              Ric Olié
+## 38:        yellow   light                 Watto
+## 39:        orange   funky               Sebulba
+## 40:         brown    dark         Quarsh Panaka
+## 41:         brown    dark        Shmi Skywalker
+## 42:        yellow   light            Darth Maul
+## 43:          pink   funky           Bib Fortuna
+## 44:         hazel    dark           Ayla Secura
+## 45:        yellow   light              Dud Bolt
+## 46:         black    dark               Gasgano
+## 47:        orange   funky        Ben Quadinaros
+## 48:         brown    dark            Mace Windu
+## 49:        yellow   light          Ki-Adi-Mundi
+## 50:         black    dark             Kit Fisto
+## 51:         brown    dark             Eeth Koth
+## 52:          blue   light            Adi Gallia
+## 53:        orange   funky           Saesee Tiin
+## 54:        yellow   light           Yarael Poof
+## 55:         black    dark              Plo Koon
+## 56:          blue   light            Mas Amedda
+## 57:         brown    dark          Gregar Typho
+## 58:         brown    dark                 Cordé
+## 59:          blue   light           Cliegg Lars
+## 60:        yellow   light     Poggle the Lesser
+## 61:          blue   light       Luminara Unduli
+## 62:          blue   light         Barriss Offee
+## 63:         brown    dark                 Dormé
+## 64:         brown    dark                 Dooku
+## 65:         brown    dark   Bail Prestor Organa
+## 66:         brown    dark            Jango Fett
+## 67:        yellow   light            Zam Wesell
+## 68:        yellow   light       Dexter Jettster
+## 69:         black    dark               Lama Su
+## 70:         black    dark               Taun We
+## 71:          blue   light            Jocasta Nu
+## 72:       unknown    &lt;NA&gt;         Ratts Tyerell
+## 73:     red, blue   funky                R4-P17
+## 74:       unknown    &lt;NA&gt;            Wat Tambor
+## 75:          gold   funky              San Hill
+## 76:         black    dark              Shaak Ti
+## 77: green, yellow   funky              Grievous
+## 78:          blue   light               Tarfful
+## 79:         brown    dark       Raymus Antilles
+## 80:         white   light             Sly Moore
+## 81:         black    dark            Tion Medon
+## 82:          dark    dark                  Finn
+## 83:         hazel    dark                   Rey
+## 84:         brown    dark           Poe Dameron
+## 85:         black    dark                   BB8
+## 86:       unknown    &lt;NA&gt;        Captain Phasma
+## 87:         brown    dark         Padmé Amidala
+##         eye_color eye_cat                  name
+```
+
+---
+
+# Modifying columns `:=` (cont.)
+
+### Sub-assign by reference on Subset
+
+* The same works on a subset of the data only:
+
+
+```r
+starwars_dt[ sex %in% c("male","none") , eye_cat_m := fcase(
+  eye_color %chin% c("black","blue-gray","brown","dark","hazel"), "dark",
+  eye_color %chin% c("gold","green, yellow","orange","pink",
+                     "red","red, blue"), "funky",
+  eye_color %chin% c("blue","white","yellow"), "light"
+)]
+
+head(starwars_dt[,.(eye_color, eye_cat, eye_cat_m,name)],n=6)
+```
+
+```
+##    eye_color eye_cat eye_cat_m           name
+## 1:      blue   light     light Luke Skywalker
+## 2:    yellow   light     light          C-3PO
+## 3:       red   funky     funky          R2-D2
+## 4:    yellow   light     light    Darth Vader
+## 5:     brown    dark      &lt;NA&gt;    Leia Organa
+## 6:      blue   light     light      Owen Lars
+```
+---
+
+# Modifying columns: Benchmark
+
+
+```r
+mod_dplyr &lt;- function(){
+  starwars %&gt;%
+    mutate(eye_cat_m = case_when(
+      sex %in% c("male","none") ~ ifelse(
+        eye_color %in% c("black","blue-gray","brown","dark","hazel"),"dark",
+          ifelse(eye_color %in% c("gold","green, yellow","orange","pink",
+                     "red","red, blue"), "funky",
+                 ifelse(c("blue","white","yellow"), "light", NA)
+          )
+        ), 
+      sex == "female" ~ NA_character_)
+    )
+}
+
+mod_dt &lt;- function(){
+  starwars_dt[ sex %in% c("male","none") , eye_cat_m := fcase(
+  eye_color %chin% c("black","blue-gray","brown","dark","hazel"), "dark",
+  eye_color %chin% c("gold","green, yellow","orange","pink",
+                     "red","red, blue"), "funky",
+  eye_color %chin% c("blue","white","yellow"), "light"
+)]
+}
+```
+
+---
+
+# Modifying columns: Benchmark
+
+
+```r
+microbenchmark(mod_dplyr(), mod_dt(), times = 10)
+```
+
+```
+## Unit: microseconds
+##         expr      min       lq     mean   median       uq       max neval
+##  mod_dplyr() 1901.214 1925.667 3528.308 2101.497 2235.383 12203.918    10
+##     mod_dt()  915.200  958.703 1593.938 1099.602 1278.768  5772.007    10
+```
 
 ---
 
@@ -763,11 +981,11 @@ To modify multiple columns simultaneously, we have two options.
 
 --
 
-Personally, I *much* prefer the functional form and so that's what I'll use going forward. E.g.
+Personally, I *much* prefer the first form and so that's what I'll use going forward. E.g.
 
 
 ```r
-DT[, ':=' (y = 3:4, y_name = c("three", "four"))]
+DT[, c("y", "y_name") :=  list(3:4 , c("three", "four"))]
 DT ## Another way to print the results instead of appending []
 ```
 
@@ -864,9 +1082,9 @@ starwars_dt[1:2, c(1:3, 10)]
 ```
 
 ```
-##                     name height mass homeworld
-## 1: Wicket Systri Warrick     88   20     Endor
-## 2:                 IG-88    200  140      &lt;NA&gt;
+##              name height mass homeworld
+## 1: Luke Skywalker    172   77  Tatooine
+## 2:          C-3PO    167   75  Tatooine
 ```
 
 --
@@ -880,9 +1098,9 @@ starwars_dt[1:2, .(name, height, mass, homeworld)]
 ```
 
 ```
-##                     name height mass homeworld
-## 1: Wicket Systri Warrick     88   20     Endor
-## 2:                 IG-88    200  140      &lt;NA&gt;
+##              name height mass homeworld
+## 1: Luke Skywalker    172   77  Tatooine
+## 2:          C-3PO    167   75  Tatooine
 ```
 
 ---
@@ -941,9 +1159,9 @@ starwars_dt[1:2, .(alias = name, crib = homeworld)]
 ```
 
 ```
-##                    alias  crib
-## 1: Wicket Systri Warrick Endor
-## 2:                 IG-88  &lt;NA&gt;
+##             alias     crib
+## 1: Luke Skywalker Tatooine
+## 2:          C-3PO Tatooine
 ```
 
 ---
@@ -1094,9 +1312,9 @@ starwars_dt[,
 ```
 
 ```
-##    species height  mass birth_year
-## 1:    Ewok   88.0 20.00    8.00000
-## 2:   Droid  131.2 69.75   53.33333
+##    species   height     mass birth_year
+## 1:   Human 176.6452 82.78182   53.41200
+## 2:   Droid 131.2000 69.75000   53.33333
 ```
 
 ---
@@ -1114,9 +1332,9 @@ starwars_dt[,
 ```
 
 ```
-##    species height  mass birth_year
-## 1:    Ewok   88.0 20.00    8.00000
-## 2:   Droid  131.2 69.75   53.33333
+##    species   height     mass birth_year
+## 1:   Human 176.6452 82.78182   53.41200
+## 2:   Droid 131.2000 69.75000   53.33333
 ```
 
 First, we specify what we want to *do* on our data subset (i.e. `.SD`). In this case, we want the mean for each element, which we obtain by iterating over with the base `lapply()` function.&lt;sup&gt;1&lt;/sup&gt;
@@ -1140,9 +1358,9 @@ starwars_dt[,
 ```
 
 ```
-##    species height  mass birth_year
-## 1:    Ewok   88.0 20.00    8.00000
-## 2:   Droid  131.2 69.75   53.33333
+##    species   height     mass birth_year
+## 1:   Human 176.6452 82.78182   53.41200
+## 2:   Droid 131.2000 69.75000   53.33333
 ```
 
 First, we specify what we want to *do* on our data subset (i.e. `.SD`). In this case, we want the mean for each element, which we obtain by iterating over with the base `lapply()` function.&lt;sup&gt;1&lt;/sup&gt;
@@ -1168,9 +1386,9 @@ starwars_dt[,
 ```
 
 ```
-##    species height  mass birth_year
-## 1:    Ewok   88.0 20.00    8.00000
-## 2:   Droid  131.2 69.75   53.33333
+##    species   height     mass birth_year
+## 1:   Human 176.6452 82.78182   53.41200
+## 2:   Droid 131.2000 69.75000   53.33333
 ```
 
 First, we specify what we want to *do* on our data subset (i.e. `.SD`). In this case, we want the mean for each element, which we obtain by iterating over with the base `lapply()` function.&lt;sup&gt;1&lt;/sup&gt;
@@ -1328,18 +1546,18 @@ microbenchmark(collapse_dplyr(), collapse_dt(), collapse_dt_key(), times = 10)
 ```
 ## Unit: milliseconds
 ##               expr        min         lq       mean     median         uq
-##   collapse_dplyr() 142.896308 149.292012 163.141922 153.831100 172.799626
-##      collapse_dt()   2.159221   2.205029   3.234790   2.566860   3.065046
-##  collapse_dt_key()   1.396491   1.440186   2.218757   1.578484   2.270720
+##   collapse_dplyr() 136.026315 141.825145 144.988406 146.038585 146.809408
+##      collapse_dt()   1.864554   2.172435   2.920754   2.413377   2.920489
+##  collapse_dt_key()   1.379216   1.466942   1.848563   1.483823   1.621259
 ##         max neval
-##  222.412864    10
-##    8.911438    10
-##    6.160148    10
+##  156.533744    10
+##    7.686398    10
+##    4.823097    10
 ```
 
 --
 
-The keyed data.table version is now **97** (!!!) faster than dplyr.
+The keyed data.table version is now **98** (!!!) faster than dplyr.
 --
 
 - That thing you feel... is your face melting.
@@ -1449,9 +1667,9 @@ microbenchmark(merge_dt(), merge_dt_key(), times = 10)
 
 ```
 ## Unit: milliseconds
-##            expr      min        lq     mean    median       uq      max neval
-##      merge_dt() 100.8688 111.28544 141.8321 132.24032 182.1676 192.3881    10
-##  merge_dt_key()  54.6401  56.92357  73.6256  67.08169  77.8940 144.7801    10
+##            expr      min       lq     mean   median       uq      max neval
+##      merge_dt() 66.23350 69.10877 86.21858 73.74832 79.06976 145.4771    10
+##  merge_dt_key() 38.06632 41.93725 59.42474 46.89623 52.62142 121.6428    10
 ```
 
 --
@@ -1504,9 +1722,9 @@ stocks
 ```
 
 ```
-##          time           X          Y          Z
-## 1: 2009-01-01  0.02525787 -0.9045304  0.3327115
-## 2: 2009-01-02 -2.17589220 -2.5869462 -0.4739614
+##          time          X         Y          Z
+## 1: 2009-01-01 -0.2240315 -1.270754  2.4088706
+## 2: 2009-01-02  1.3321825 -1.162067 -0.3782444
 ```
 
 To convert this into long format, we could do either of the following:
@@ -1519,13 +1737,13 @@ melt(stocks, id.vars ="time")
 ```
 
 ```
-##          time variable       value
-## 1: 2009-01-01        X  0.02525787
-## 2: 2009-01-02        X -2.17589220
-## 3: 2009-01-01        Y -0.90453036
-## 4: 2009-01-02        Y -2.58694623
-## 5: 2009-01-01        Z  0.33271149
-## 6: 2009-01-02        Z -0.47396136
+##          time variable      value
+## 1: 2009-01-01        X -0.2240315
+## 2: 2009-01-02        X  1.3321825
+## 3: 2009-01-01        Y -1.2707539
+## 4: 2009-01-02        Y -1.1620666
+## 5: 2009-01-01        Z  2.4088706
+## 6: 2009-01-02        Z -0.3782444
 ```
 ]]
 
@@ -1537,13 +1755,13 @@ stocks %&gt;%
 ```
 
 ```
-##          time stock       price
-## 1: 2009-01-01     X  0.02525787
-## 2: 2009-01-02     X -2.17589220
-## 3: 2009-01-01     Y -0.90453036
-## 4: 2009-01-02     Y -2.58694623
-## 5: 2009-01-01     Z  0.33271149
-## 6: 2009-01-02     Z -0.47396136
+##          time stock      price
+## 1: 2009-01-01     X -0.2240315
+## 2: 2009-01-02     X  1.3321825
+## 3: 2009-01-01     Y -1.2707539
+## 4: 2009-01-02     Y -1.1620666
+## 5: 2009-01-01     Z  2.4088706
+## 6: 2009-01-02     Z -0.3782444
 ```
 ]]
 
@@ -1561,13 +1779,13 @@ stocks_long
 ```
 
 ```
-##          time stock       price
-## 1: 2009-01-01     X  0.02525787
-## 2: 2009-01-02     X -2.17589220
-## 3: 2009-01-01     Y -0.90453036
-## 4: 2009-01-02     Y -2.58694623
-## 5: 2009-01-01     Z  0.33271149
-## 6: 2009-01-02     Z -0.47396136
+##          time stock      price
+## 1: 2009-01-01     X -0.2240315
+## 2: 2009-01-02     X  1.3321825
+## 3: 2009-01-01     Y -1.2707539
+## 4: 2009-01-02     Y -1.1620666
+## 5: 2009-01-01     Z  2.4088706
+## 6: 2009-01-02     Z -0.3782444
 ```
 
 --
@@ -1581,9 +1799,9 @@ dcast(stocks_long,
 ```
 
 ```
-##          time           X          Y          Z
-## 1: 2009-01-01  0.02525787 -0.9045304  0.3327115
-## 2: 2009-01-02 -2.17589220 -2.5869462 -0.4739614
+##          time          X         Y          Z
+## 1: 2009-01-01 -0.2240315 -1.270754  2.4088706
+## 2: 2009-01-02  1.3321825 -1.162067 -0.3782444
 ```
 ]]
 
@@ -1596,11 +1814,79 @@ stocks_long %&gt;%
 ```
 
 ```
-##          time           X          Y          Z
-## 1: 2009-01-01  0.02525787 -0.9045304  0.3327115
-## 2: 2009-01-02 -2.17589220 -2.5869462 -0.4739614
+##          time          X         Y          Z
+## 1: 2009-01-01 -0.2240315 -1.270754  2.4088706
+## 2: 2009-01-02  1.3321825 -1.162067 -0.3782444
 ```
 ]]
+
+---
+
+# Reshaping multiple columns
+
+* In this [vignette](https://cran.r-project.org/web/packages/data.table/vignettes/datatable-reshape.html) you have a bunch more examples of efficient reshapes with data.table
+* One of my favourites is the ability to reshape *several* columns at once.
+
+.small90[
+
+
+```r
+DT &lt;- fread(s2)
+DT
+```
+
+```
+##    family_id age_mother dob_child1 dob_child2 dob_child3 gender_child1
+## 1:         1         30 1998-11-26 2000-01-29       &lt;NA&gt;             1
+## 2:         2         27 1996-06-22       &lt;NA&gt;       &lt;NA&gt;             2
+## 3:         3         26 2002-07-11 2004-04-05 2007-09-02             2
+## 4:         4         32 2004-10-10 2009-08-27 2012-07-21             1
+## 5:         5         29 2000-12-05 2005-02-28       &lt;NA&gt;             2
+##    gender_child2 gender_child3
+## 1:             2            NA
+## 2:            NA            NA
+## 3:             2             1
+## 4:             1             1
+## 5:             1            NA
+```
+
+```r
+# melt
+colA = paste("dob_child", 1:3, sep = "")
+colB = paste("gender_child", 1:3, sep = "")
+DT.m2 = melt(DT, measure = list(colA, colB), 
+             value.name = c("dob", "gender"))
+```
+]
+---
+
+# Reshape
+
+
+```r
+DT.m2 = melt(DT, measure = patterns("^dob", "^gender"), value.name = c("dob", "gender"))
+DT.m2
+```
+
+```
+##     family_id age_mother variable        dob gender
+##  1:         1         30        1 1998-11-26      1
+##  2:         2         27        1 1996-06-22      2
+##  3:         3         26        1 2002-07-11      2
+##  4:         4         32        1 2004-10-10      1
+##  5:         5         29        1 2000-12-05      2
+##  6:         1         30        2 2000-01-29      2
+##  7:         2         27        2       &lt;NA&gt;     NA
+##  8:         3         26        2 2004-04-05      2
+##  9:         4         32        2 2009-08-27      1
+## 10:         5         29        2 2005-02-28      1
+## 11:         1         30        3       &lt;NA&gt;     NA
+## 12:         2         27        3       &lt;NA&gt;     NA
+## 13:         3         26        3 2007-09-02      1
+## 14:         4         32        3 2012-07-21      1
+## 15:         5         29        3       &lt;NA&gt;     NA
+```
+
 
 ---
 name: tidyverse
@@ -1725,13 +2011,13 @@ microbenchmark::microbenchmark(collapse_dplyr(), collapse_dt(), collapse_dtplyr(
 ```
 ## Unit: milliseconds
 ##               expr        min         lq       mean     median         uq
-##   collapse_dplyr() 151.898198 185.759324 214.322660 206.060337 234.373650
-##      collapse_dt()   2.513900   2.752547   3.367394   3.382385   3.599663
-##  collapse_dtplyr()   4.083731   5.143531   9.618602   6.422854   8.375387
+##   collapse_dplyr() 134.114441 145.430780 150.673383 148.282573 155.434974
+##      collapse_dt()   2.194569   2.412785   2.583555   2.606886   2.758593
+##  collapse_dtplyr()   3.167961   3.791454   4.743383   4.524771   4.954700
 ##         max neval
-##  318.417526    10
-##    5.275822    10
-##   29.994086    10
+##  179.675328    10
+##    2.839397    10
+##    8.593102    10
 ```
 
 --

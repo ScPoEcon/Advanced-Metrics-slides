@@ -478,15 +478,6 @@ starwars_dt[
 class: inverse, center, middle
 name: i
 
-# What is a data.table?
-<html><div style='float:left'></div><hr color='#EB811B' size=1px width=796px></html>
-
-
-
----
-class: inverse, center, middle
-name: i
-
 # Working with rows: DT[i, ]
 <html><div style='float:left'></div><hr color='#EB811B' size=1px width=796px></html>
 
@@ -693,9 +684,9 @@ DT2[a < 0, b := NA][] ## Again, just adding the second [] to print to screen
 ```{r}
 starwars_dt[ , eye_cat := fcase(
   eye_color %chin% c("black","blue-gray","brown","dark","hazel"), "dark",
-  eye_color %chin% c("blue","gold","green, yellow","orange","pink",
+  eye_color %chin% c("gold","green, yellow","orange","pink",
                      "red","red, blue"), "funky",
-  eye_color %chin% c("white","yellow"), "light"
+  eye_color %chin% c("blue","white","yellow"), "light"
 )]
 
 starwars_dt[,.(eye_color, eye_cat, name)]
@@ -712,9 +703,9 @@ starwars_dt[,.(eye_color, eye_cat, name)]
 ```{r}
 starwars_dt[ sex %in% c("male","none") , eye_cat_m := fcase(
   eye_color %chin% c("black","blue-gray","brown","dark","hazel"), "dark",
-  eye_color %chin% c("blue","gold","green, yellow","orange","pink",
+  eye_color %chin% c("gold","green, yellow","orange","pink",
                      "red","red, blue"), "funky",
-  eye_color %chin% c("white","yellow"), "light"
+  eye_color %chin% c("blue","white","yellow"), "light"
 )]
 
 head(starwars_dt[,.(eye_color, eye_cat, eye_cat_m,name)],n=6)
@@ -729,9 +720,9 @@ mod_dplyr <- function(){
     mutate(eye_cat_m = case_when(
       sex %in% c("male","none") ~ ifelse(
         eye_color %in% c("black","blue-gray","brown","dark","hazel"),"dark",
-          ifelse(eye_color %in% c("blue","gold","green, yellow","orange","pink",
+          ifelse(eye_color %in% c("gold","green, yellow","orange","pink",
                      "red","red, blue"), "funky",
-                 ifelse(c("white","yellow"), "light", NA)
+                 ifelse(c("blue","white","yellow"), "light", NA)
           )
         ), 
       sex == "female" ~ NA_character_)
@@ -741,9 +732,9 @@ mod_dplyr <- function(){
 mod_dt <- function(){
   starwars_dt[ sex %in% c("male","none") , eye_cat_m := fcase(
   eye_color %chin% c("black","blue-gray","brown","dark","hazel"), "dark",
-  eye_color %chin% c("blue","gold","green, yellow","orange","pink",
+  eye_color %chin% c("gold","green, yellow","orange","pink",
                      "red","red, blue"), "funky",
-  eye_color %chin% c("white","yellow"), "light"
+  eye_color %chin% c("blue","white","yellow"), "light"
 )]
 }
 ```
