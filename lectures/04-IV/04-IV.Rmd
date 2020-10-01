@@ -115,13 +115,15 @@ library(magrittr)
 
 .pull-right[
 
-## 1850
+## 1850:
+
 
 * Unknown that germs can cause disease.
 * Microscopes exist, but work at rather poor resolution.
 * Most human pathogens are not visible to the naked eye.
 * The so-called *infection theory* (i.e. infection via *germs*) has some supporters, 
 * but the dominant idea is that disease, in general, results from [*miasmas*](https://en.wikipedia.org/wiki/Miasma_theory)
+
 
 ]
 
@@ -189,6 +191,36 @@ cholera::snowMap()
 ```
 ]
 
+---
+
+# `cholera`
+
+.pull-left[
+...or the walking path of case number 15 in Snow's data:
+
+```{r,echo = FALSE,fig.height = 5}
+plot(cholera::walkingPath(15))
+```
+]
+
+--
+
+.pull-right[
+...or estimate Voronoi Polygons for pump neighborhoods:
+```{r,echo = FALSE,fig.height = 5}
+# compute vertices of Voronoi tiles
+vertices <- cholera::voronoiPolygons(sites = cholera::pumps, rw.data = cholera::roads)
+
+# define colors
+snow.colors <- grDevices::adjustcolor(cholera::snowColors(), alpha.f = 1/3)
+
+# plot map and color coded tiles
+cholera::snowMap(add.cases = FALSE)
+invisible(lapply(seq_along(vertices), function(i) {
+  polygon(vertices[[i]], col = snow.colors[[i]])
+}))
+```
+]
 
 ---
 
@@ -228,7 +260,7 @@ plot(cholera::timeSeries())
 
 # Snow's conclusion
 
-* Snow collected the followign data: 
+* Snow collected the following data: 
 
 ```{r,echo = FALSE}
 st9 <- data.frame(area = c("Southwark and Vauxhall","Lambeth","Rest of London"),numhouses = c(40046,26107,256423), 
@@ -250,7 +282,7 @@ class: separator, middle
 
 # We Need A Model.
 
-## Because: *It takes a model to beat a model* (Per Krusell, 2020)
+## Because: *It takes a model to beat a model*
 
 
 
@@ -262,6 +294,227 @@ layout: true
 ---
 
 # Snow's Model of Cholera Transmission
+
+
+* Suppose that $c_i$ takes the value 1 if individual $i$ dies of cholera, 0 else.
+
+* Let $w_i = 1$ mean that $i$'s water supply is impure and $w_i = 0$ vice versa. Water purity is assessed with a technology that cannot detect small microbes.
+
+* Collect in $u_i$ all unobservable factors that impact $i$'s likelihood of dying from the disease: whether $i$ is poor, where exactly they reside, whether there is bad air quality in $i$'s surrounding, and other invidivual characteristics which impact the outcome (like genetic setup of $i$).
+
+--
+
+We can write:
+
+$$
+c_i = \alpha + \delta w_i + u_i 
+$$
+
+---
+
+# Doing the Simple Thing is always right?
+
+.pull-left[
+
+* John Snow could have used his data and assess the correlation between drinking pure water and cholera incidence.
+
+* measure $Cor(c_i,w_i)$
+
+* Suppose $Cor(c_i,w_i) \approx 0.5$. Does that prove the infection theory?
+]
+
+--
+
+.pull-right[
+Note quite. Angus Deaton says:
+
+> The people who drank impure water were also more likely to be poor, and to live in an environment contaminated in many ways, not least by the ‘poison miasmas’ that were then thought to be the cause of cholera.
+
+☹️
+
+]
+
+---
+
+# The Simple Thing
+
+
+* It does not make sense to compare someone who drinks pure water with someone with impure water.
+
+* because *all else is not equal*: pure water is correlated with being poor, living in bad area, bad air quality and so on - all factors that we encounter in $u_i$. 
+
+* This violates the crucial orthogonality assumption for valid OLS estimates, $E[u_i | w_i]=0$ in this context. 
+
+* Another way to say this, is that $Cov(w_i, u_i) \neq 0$, implying that $w_i$ is *endogenous*. 
+
+* There are factors in $u_i$ that affect both $w_i$ and $c_i$
+
+---
+
+# Snow's Model and Some Algebra
+
+Remember our simple model:
+$$c_i = \alpha + \delta + u_i$$
+Now let's condition on both values of $w$:
+\begin{align}
+E[c_i | w_i = 1] &= \alpha + \delta + E[u_i | w_i = 1] \\
+E[c_i | w_i = 0] &= \alpha + \phantom{\delta} + E[u_i | w_i = 0]
+\end{align}
+
+--
+
+Now substract one line from the other:
+
+\begin{equation}
+E[c_i | w_i = 1] - E[c_i | w_i = 0] = \delta + \left\{ E[u_i | w_i = 1] - E[u_i | w_i = 0]\right\}
+\end{equation}
+
+* The last term $\left\{ E[u_i | w_i = 1] - E[u_i | w_i = 0]\right\}$ is not equal to zero. 
+
+* A regression estimate for $\delta$ would be biased by that quantity.
+
+---
+
+
+layout: false
+class: separator, middle
+
+# The IV Estimator
+
+
+---
+layout: true
+
+<div class="my-footer"><img src="../img/logo/ScPo-shield.png" style="height: 60px;"/></div> 
+
+---
+
+# John Snow Says
+
+> [...] the mixing of the supply is of the most intimate kind. The pipes of each Company go down all the streets, and into nearly all the courts and alleys. [...] The experiment, too, is on the grandest scale. No fewer than three hundred thousand people of both sexes, of every age and occupation, and of every rank and station, from gentlefolks down to the very poor, were divided into two groups without their choice, and in most cases, without their knowledge; one group supplied with water containing the sewage of London, and amongst it, whatever might have come from the cholera patients, the other group having water quite free from such impurity.
+
+---
+background-image: url("../../img/snow-supply.jpg")
+background-size: cover
+
+# London Water Supply
+
+---
+
+# Proposing an IV
+
+* Snow is proposing an **instrumental variable** $z_i$, the *identity of the water supplying company* to household $i$, 
+
+* $z_i$ is highly correlated with the water purity $w_i$. 
+
+* However, it seems to be uncorrelated with all the other factors in $u_i$, which worried us before: Water supply was decided years before, and now houses on the same street have different suppliers!
+
+---
+
+# Simple IV in a DAG
+
+```{r IV-dag,warning = FALSE,message = FALSE,echo = FALSE,fig.height = 5}
+library(ggdag)
+library(dplyr)
+coords <- list(
+    x = c(z = 1, w = 3, u = 4, c = 5),
+    y = c(z = 0, w = 0, u = 0.5, c = 0)
+    )
+
+dag <- dagify(c ~ w + u,
+              w ~ z + u, coords = coords)
+
+dag %>% 
+  tidy_dagitty() %>% 
+  mutate(linetype = ifelse(name == "u", "dashed", "solid")) %>% 
+  ggplot(aes(x = x, y = y, xend = xend, yend = yend)) + 
+  geom_dag_point() + 
+  geom_dag_text() + 
+  geom_dag_edges(aes(edge_linetype = linetype), show.legend = FALSE) + 
+  theme_void()
+
+```
+
+---
+
+# Defining Snow's IV Formally
+
+More formally, let's define the instrument as follows:
+
+\begin{align*}
+z_i &=  \begin{cases}
+                    1 & \text{if water supplied by Lambeth} \\
+                    0 & \text{if water supplied by Southwark or Vauxhall.} \\
+                 \end{cases} \\
+\end{align*}
+
+--
+
+Here are the conditions for a valid instrument:
+
+1. **Relevance** or **First Stage**: Water purity is indeed a function of supplier identity. We want that $$E[w_i | z_i = 1] \neq E[w_i | z_i = 0]$$ i.e. the average water purity differs across suppliers. We can *verify* this condition with observational data. We want this effect to be reliably causal.
+
+--
+
+2. **Independence**: Whether a household has $z_i = 1$ or $z_i = 0$ is unrelated to $u$, hence *as good as random*. Whether we condition $u$ on certain values of $z$ does not change the result - we want $$E[u_i | z_i = 1] = E[u_i | z_i = 0].$$
+
+--
+
+3. **Excludability** the instrument should affect the outcome $c$ *only* through the specified channel (i.e. via water purity $w$), and nothing else.
+
+
+---
+
+# Defining the IV Estimator
+
+We are now ready to define a simple IV estimator. Like before, let's condition on the values of $z$:
+
+\begin{align}
+E[c_i | z_i = 1] &= \alpha + \delta E[w_i | z_i = 1] + E[u_i | z_i = 1] \\
+E[c_i | z_i = 0] &= \alpha + \delta E[w_i | z_i = 0] + E[u_i | z_i = 0]
+\end{align}
+
+which upon differencing both lines gives 
+
+\begin{align}
+E[c_i | z_i = 1] - E[c_i | z_i = 0] &= \delta  \left\{ E[w_i | z_i = 1] - E[w_i | z_i = 0]\right\} \\
+&+ \underbrace{\left\{ E[u_i | z_i = 1] - E[u_i | z_i = 0] \right\}}_{=0 \text{ by Exogeneity Assumption}}
+\end{align}
+
+--
+
+* Finally, if the IV is *relevant*, i.e. $E[w_i | z_i = 1] - E[w_i | z_i = 0] \neq 0$:
+
+\begin{equation}
+\delta = \frac{E[c_i | z_i = 1] - E[c_i | z_i = 0]}{E[w_i | z_i = 1] - E[w_i | z_i = 0]} (\#eq:IV)
+\end{equation}
+
+
+---
+
+# Special Case: Wald Estimator
+
+Let's say that $x \mapsto y$ means that $x$ is an estimate for $y$:
+
+1. $\overline{c}_1 \mapsto E[c_i | z_i = 1]$: the proportion of households supplied by Lambeth with cholera.
+1. $\overline{w}_1 \mapsto E[w_i | z_i = 1]$: the proportion of households supplied by Lambeth with bad water.
+1. $\overline{c}_0 \mapsto E[c_i | z_i = 0]$: the proportion of households not supplied by Lambeth with cholera.
+1. $\overline{w}_0 \mapsto E[w_i | z_i = 0]$: the proportion of households not supplied by Lambeth with bad water.
+
+The estimator would then be
+
+\begin{equation}
+\hat{\delta} = \frac{\overline{c}_1 - \overline{c}_0}{\overline{w}_1 - \overline{w}_0} 
+\end{equation}
+
+In this special case where all involved variables $c,w,z$ are binary, the estimator is called the *Wald estimator*.
+
+---
+
+**Summary**: IVs are a powerful tool to establish causality in contexts with observational data only and where we are concerned that the conditional mean assumption $E[u_i | x_i]=0$ is violated, hence, we cannot say *all else equal, as $x$ changes, $y$ changes like this and that*. Then we say that $x$ is *endogenous*. The key features of IV $z$ are that 
+
+1. $z$ is *relevant* for $x$. For example, in a simple regression of $z$ on $x$, we want $z$ to have considerable predictive power. We can *test* this condition in data.
+2. We need a theory according to which is *reasonable* to assume that $z$ is *unrelated* to other unobservable factors that might impact the outcome. Hence, $z$ is *exogenous* to $u$, or $E[u | z] = 0$. This is an **assumption** (i.e. we can not test this with data).
 
 
 ---
