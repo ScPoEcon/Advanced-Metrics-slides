@@ -65,9 +65,9 @@ library(magrittr)
 
 * we will introduce *instrumental variables* (IV)
 
-* We will look at a historic episode from 1850 London.
+* To motivate IV, we will look back to London in 1850 and learn about John Snow.
 
-* We will introduce the IV estimator formally.
+* We will finally introduce the IV estimator formally.
 ]
 
 
@@ -93,15 +93,65 @@ library(magrittr)
 
 * RCTs can break the self-selection of people into treatment by assigning randomly.
 
-* So with experimental data, we have good solution.
+* So with experimental data, we have a good solution.
 
 * What about non-experimental data?
 ]
 
+---
+
+# Non-Experimental Data
+
+.pull-left[
+
+* We talked about **omitted variable bias**.
+
+* What if there is correlation between a variable in the error term $u$, $x_2$ say, and our explanatory variable $x_1$?
+
+* We will obtain biased estimates because we cannot separate out what  is what: effect of $x_1$, or of $x_2$?
+
+* Remember that this can be so severe that we don't even get the correct sign of an effect.
+]
+
+.pull-right[
+
+```{r dag1,fig.height = 6,echo = FALSE}
+library(ggdag)
+library(dplyr)
+dag = dagify(y ~ x1,
+            y ~ x2,
+            y ~ x3,
+            x1 ~ x2,
+            x3 ~ x2,
+       coords = list(x = c("x2" = 0,"x1" = 1,"x3" = 1.0,"y" = 2),
+                     y = c("x2" = 0,"x1" = 0.5,"x3" = -0.5,"y" = 0)))
+p2 = dag %>%
+  tidy_dagitty() %>%
+      mutate(linetype = if_else(name =="x2", "dashed","solid")) %>% 
+    ggplot(aes(x = x, y = y, xend = xend, yend = yend)) + 
+    geom_dag_point() + 
+      geom_dag_text(col = "white") +
+    geom_dag_edges(aes(edge_linetype = linetype), show.legend = FALSE) + theme_dag()
+p2
+```
+]
+
+--
+
+.center[**IV** provides a solution to OVB.]
+
+---
+background-image: url(../../img/Kensington_slums_large.jpg)
+background-size: cover
+class: middle
+
+# Welcome to London in 1850
+
+## .white[(Slum in Kensington)]
 
 ---
 
-# John Snow's (Non) Experiment
+# John Snow's (Non) Experiment: Cholera Hits the Town
 
 .pull-left[
 
@@ -111,19 +161,34 @@ library(magrittr)
 
 ]
 
---
+.pull-right[
+```{r, fig.width=6,echo = FALSE}
+knitr::include_graphics("../../img/father-thames.jpg")
+```
+]
+
+---
+background-image: url(../../img/slum.jpg)
+background-size: cover
 
 .pull-right[
-
-## 1850:
+<br>
+<br>
+<br>
+.red[
+## In 1850:
 
 
 * Unknown that germs can cause disease.
-* Microscopes exist, but work at rather poor resolution.
-* Most human pathogens are not visible to the naked eye.
-* The so-called *infection theory* (i.e. infection via *germs*) has some supporters, 
-* but the dominant idea is that disease, in general, results from [*miasmas*](https://en.wikipedia.org/wiki/Miasma_theory)
 
+* Microscopes exist, but work at rather poor resolution.
+
+* Most human pathogens are not visible to the naked eye.
+
+* The so-called *infection theory* (i.e. infection via *germs*) has some supporters, 
+
+* but the dominant idea is that disease, in general, results from [*miasmas*](https://en.wikipedia.org/wiki/Miasma_theory)
+]
 
 ]
 
@@ -369,7 +434,7 @@ Now substract one line from the other:
 E[c_i | w_i = 1] - E[c_i | w_i = 0] = \delta + \left\{ E[u_i | w_i = 1] - E[u_i | w_i = 0]\right\}
 \end{equation}
 
-* The last term $\left\{ E[u_i | w_i = 1] - E[u_i | w_i = 0]\right\}$ is not equal to zero. 
+* The last term $\left\{ E[u_i | w_i = 1] - E[u_i | w_i = 0]\right\}$ is not equal to zero (by what Deaton said!)
 
 * A regression estimate for $\delta$ would be biased by that quantity.
 
@@ -403,17 +468,30 @@ background-size: cover
 
 # Proposing an IV
 
-* Snow is proposing an **instrumental variable** $z_i$, the *identity of the water supplying company* to household $i$, 
+* Snow is proposing an **instrumental variable** $z_i$, the *identity of the water supplying company* to household $i$:
+
+More formally, let's define the instrument as follows:
+
+\begin{align*}
+z_i &=  \begin{cases}
+                    1 & \text{if water supplied by Lambeth} \\
+                    0 & \text{if water supplied by Southwark or Vauxhall.} \\
+                 \end{cases} \\
+\end{align*}
 
 * $z_i$ is highly correlated with the water purity $w_i$. 
 
 * However, it seems to be uncorrelated with all the other factors in $u_i$, which worried us before: Water supply was decided years before, and now houses on the same street have different suppliers!
 
 ---
+background-image: url(../../img/IV-dag.png)
+background-position: 60% 50%
 
 # Simple IV in a DAG
 
-```{r IV-dag,warning = FALSE,message = FALSE,echo = FALSE,fig.height = 5}
+* $u$ affects both outcome and explanatory variable
+
+```{r IV-dag,warning = FALSE,eval = FALSE,message = FALSE,echo = FALSE,fig.height = 5}
 library(ggdag)
 library(dplyr)
 coords <- list(
@@ -439,14 +517,7 @@ dag %>%
 
 # Defining Snow's IV Formally
 
-More formally, let's define the instrument as follows:
 
-\begin{align*}
-z_i &=  \begin{cases}
-                    1 & \text{if water supplied by Lambeth} \\
-                    0 & \text{if water supplied by Southwark or Vauxhall.} \\
-                 \end{cases} \\
-\end{align*}
 
 --
 
