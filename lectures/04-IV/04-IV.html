@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>ScPoEconometrics: Advanced</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Florian Oswald" />
+    <script src="libs/header-attrs/header-attrs.js"></script>
+    <link href="libs/remark-css/default.css" rel="stylesheet" />
+    <script src="https://use.fontawesome.com/5235085b15.js"></script>
+
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-41584331-6"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'UA-41584331-6');
+    </script>
+
+    <link rel="stylesheet" href="../../css/scpo.css" type="text/css" />
+    <link rel="stylesheet" href="../../css/scpo-fonts.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+# ScPoEconometrics: Advanced
+## Instrumental Variables
+### Florian Oswald
+### SciencesPo Paris </br> 2020-10-06
+
+---
+
+
+layout: true
+
+&lt;div class="my-footer"&gt;&lt;img src="../../img/logo/ScPo-shield.png" style="height: 60px;"/&gt;&lt;/div&gt; 
+
+---
+
+
+
+# Where Are We At?
+
+.pull-left[
+
+## What Did we Do Last Week?
+
+* We introduced the `data.table` package.
+
+* We compared it the `dplyr` approach.
+
+* We highlighted pros and cons and the potential for using them both.
+
+]
+
+
+--
+
+.pull-right[
+
+## Today
+
+* we will introduce *instrumental variables* (IV)
+
+* To motivate IV, we will look back to London in 1850 and learn about John Snow.
+
+* We will finally introduce the IV estimator formally.
+]
+
+
+---
+
+# Setting the Scene
+
+.pull-left[
+
+* In chapters [7](https://scpoecon.github.io/ScPoEconometrics/causality.html), [8](https://scpoecon.github.io/ScPoEconometrics/STAR.html) and [9](https://scpoecon.github.io/ScPoEconometrics/RDD.html) of the book (and the intro course) we talk about the merits of _experimental methods_.
+
+* Randomized Control Trials (RCTs) or _Quasiexperimental_ (as good as random) settings allow us to estimate **causal** effects. 
+
+* In particular the [RCT](https://scpoecon.github.io/ScPoEconometrics/causality.html#rct) should be familiar to you.
+
+]
+
+--
+
+.pull-right[
+
+* If people have some sort of control about getting treatment, there will be *selection*.
+
+* RCTs can break the self-selection of people into treatment by assigning randomly.
+
+* So with experimental data, we have a good solution.
+
+* What about non-experimental data?
+]
+
+---
+
+# Non-Experimental Data
+
+.pull-left[
+
+* We talked about **omitted variable bias**.
+
+* What if there is correlation between a variable in the error term `\(u\)`, `\(x_2\)` say, and our explanatory variable `\(x_1\)`?
+
+* We will obtain biased estimates because we cannot separate out what  is what: effect of `\(x_1\)`, or of `\(x_2\)`?
+
+* Remember that this can be so severe that we don't even get the correct sign of an effect.
+]
+
+.pull-right[
+
+&lt;img src="04-IV_files/figure-html/dag1-1.svg" style="display: block; margin: auto;" /&gt;
+]
+
+--
+
+.center[**IV** provides a solution to OVB.]
+
+---
+background-image: url(../../img/Kensington_slums_large.jpg)
+background-size: cover
+class: middle
+
+# Welcome to London in 1850
+
+## .white[(Slum in Kensington)]
+
+---
+
+# John Snow's (Non) Experiment: Cholera Hits the Town
+
+.pull-left[
+
+* John Snow was a physician in London around 1850, when Cholera erupted several times in the City.
+
+* There was a dispute at the time about how the disease is transmitted: via air or via water?
+
+]
+
+.pull-right[
+&lt;img src="../../img/father-thames.jpg" width="2667" style="display: block; margin: auto;" /&gt;
+]
+
+---
+background-image: url(../../img/slum.jpg)
+background-size: cover
+
+.pull-right[
+&lt;br&gt;
+&lt;br&gt;
+&lt;br&gt;
+.red[
+## In 1850:
+
+
+* Unknown that germs can cause disease.
+
+* Microscopes exist, but work at rather poor resolution.
+
+* Most human pathogens are not visible to the naked eye.
+
+* The so-called *infection theory* (i.e. infection via *germs*) has some supporters, 
+
+* but the dominant idea is that disease, in general, results from [*miasmas*](https://en.wikipedia.org/wiki/Miasma_theory)
+]
+
+]
+
+---
+background-image: url(https://media.giphy.com/media/3s4jGZP9UapxROVVN9/giphy.gif)
+background-size: 800px
+
+# Let's Go Watch a Movie
+
+&lt;br&gt;
+&lt;br&gt;
+&lt;br&gt;
+&lt;br&gt;
+&lt;br&gt;
+&lt;br&gt;
+&lt;br&gt;
+&lt;br&gt;
+&lt;br&gt;
+&lt;br&gt;
+&lt;br&gt;
+&lt;br&gt;
+&lt;br&gt;
+&lt;br&gt;
+
+--
+
+.center[May the force be with you. (click [here!](https://itempool.com/floswald/c/pahhozoDAnF))]
+
+
+---
+
+# Snow's Detective Work
+
+.pull-left[
+
+* Snow collected a lot of data.
+
+* He first mapped the location of dead during the 1854 outbreak.
+
+* This was the notorious *Broadstreet Pump Outbreak*
+
+]
+
+--
+
+.pull-right[
+&lt;img src="../../img/snow-map.jpg" width="1024" style="display: block; margin: auto;" /&gt;
+]
+
+---
+
+# The `cholera` package
+
+.pull-left[
+* The `cholera` package has some interesting features.
+
+* For example an R version of Snow's map:
+]
+
+.pull-right[
+
+```r
+cholera::snowMap()
+```
+
+&lt;img src="04-IV_files/figure-html/unnamed-chunk-2-1.svg" style="display: block; margin: auto;" /&gt;
+]
+
+---
+
+# `cholera`
+
+.pull-left[
+...or the walking path of case number 15 in Snow's data:
+
+&lt;img src="04-IV_files/figure-html/unnamed-chunk-3-1.svg" style="display: block; margin: auto;" /&gt;
+]
+
+--
+
+.pull-right[
+...or estimate Voronoi Polygons for pump neighborhoods:
+&lt;img src="04-IV_files/figure-html/unnamed-chunk-4-1.svg" style="display: block; margin: auto;" /&gt;
+]
+
+---
+
+# Removal of the Broad Street Pump?
+
+.pull-left[
+* Snow identified the Broad Street Pump as culprit.
+
+* He pleaded to have its handle removed.
+
+* He was sceptical this was the reason the epidemic ended.
+
+]
+
+.pull-right[
+&lt;img src="04-IV_files/figure-html/unnamed-chunk-5-1.svg" style="display: block; margin: auto;" /&gt;
+]
+
+---
+
+# Mapping London's Water Supply
+
+
+* Water supply came from the River Thames
+
+* Different supply companies had different intake points
+
+* Southwark and Vauxhall water companies took in water beneath a major sewage discharge.
+
+* Lambeth water did not.
+
+
+
+---
+
+# Snow's conclusion
+
+* Snow collected the following data: 
+
+
+|area                   | numhouses| deaths| death1000|
+|:----------------------|---------:|------:|---------:|
+|Southwark and Vauxhall |     40046|   1263|       315|
+|Lambeth                |     26107|     98|        37|
+|Rest of London         |    256423|   1422|        59|
+
+* And concluded
+
+&gt;that if Southwark and Vauxhall water companies had moved their water intakes upstream to where Lambeth water was taking in their supply, roughly 1,000 lives could have been saved. 
+
+* For proponents of the miasma theory, this was still not evidence enough, because there were also many factors that led to poor air quality in those areas.
+
+---
+
+layout: false
+class: separator, middle
+
+# We Need A Model.
+
+## Because: *It takes a model to beat a model*
+
+
+
+---
+layout: true
+
+&lt;div class="my-footer"&gt;&lt;img src="../img/logo/ScPo-shield.png" style="height: 60px;"/&gt;&lt;/div&gt; 
+
+---
+
+# Snow's Model of Cholera Transmission
+
+
+* Suppose that `\(c_i\)` takes the value 1 if individual `\(i\)` dies of cholera, 0 else.
+
+* Let `\(w_i = 1\)` mean that `\(i\)`'s water supply is impure and `\(w_i = 0\)` vice versa. Water purity is assessed with a technology that cannot detect small microbes.
+
+* Collect in `\(u_i\)` all unobservable factors that impact `\(i\)`'s likelihood of dying from the disease: whether `\(i\)` is poor, where exactly they reside, whether there is bad air quality in `\(i\)`'s surrounding, and other invidivual characteristics which impact the outcome (like genetic setup of `\(i\)`).
+
+--
+
+We can write:
+
+$$
+c_i = \alpha + \delta w_i + u_i 
+$$
+
+---
+
+# Doing the Simple Thing is always right?
+
+.pull-left[
+
+* John Snow could have used his data and assess the correlation between drinking pure water and cholera incidence.
+
+* measure `\(Cor(c_i,w_i)\)`
+
+* Suppose `\(Cor(c_i,w_i) \approx 0.5\)`. Does that prove the infection theory?
+]
+
+--
+
+.pull-right[
+Note quite. Angus Deaton says:
+
+&gt; The people who drank impure water were also more likely to be poor, and to live in an environment contaminated in many ways, not least by the ‘poison miasmas’ that were then thought to be the cause of cholera.
+
+☹️
+
+]
+
+---
+
+# The Simple Thing
+
+
+* It does not make sense to compare someone who drinks pure water with someone with impure water.
+
+* because *all else is not equal*: pure water is correlated with being poor, living in bad area, bad air quality and so on - all factors that we encounter in `\(u_i\)`. 
+
+* This violates the crucial orthogonality assumption for valid OLS estimates, `\(E[u_i | w_i]=0\)` in this context. 
+
+* Another way to say this, is that `\(Cov(w_i, u_i) \neq 0\)`, implying that `\(w_i\)` is *endogenous*. 
+
+* There are factors in `\(u_i\)` that affect both `\(w_i\)` and `\(c_i\)`
+
+---
+
+# Snow's Model and Some Algebra
+
+Remember our simple model:
+`$$c_i = \alpha + \delta + u_i$$`
+Now let's condition on both values of `\(w\)`:
+`\begin{align}
+E[c_i | w_i = 1] &amp;= \alpha + \delta + E[u_i | w_i = 1] \\
+E[c_i | w_i = 0] &amp;= \alpha + \phantom{\delta} + E[u_i | w_i = 0]
+\end{align}`
+
+--
+
+Now substract one line from the other:
+
+`\begin{equation}
+E[c_i | w_i = 1] - E[c_i | w_i = 0] = \delta + \left\{ E[u_i | w_i = 1] - E[u_i | w_i = 0]\right\}
+\end{equation}`
+
+* The last term `\(\left\{ E[u_i | w_i = 1] - E[u_i | w_i = 0]\right\}\)` is not equal to zero (by what Deaton said!)
+
+* A regression estimate for `\(\delta\)` would be biased by that quantity.
+
+---
+
+
+layout: false
+class: separator, middle
+
+# The IV Estimator
+
+
+---
+layout: true
+
+&lt;div class="my-footer"&gt;&lt;img src="../img/logo/ScPo-shield.png" style="height: 60px;"/&gt;&lt;/div&gt; 
+
+---
+
+# John Snow Says
+
+&gt; [...] the mixing of the supply is of the most intimate kind. The pipes of each Company go down all the streets, and into nearly all the courts and alleys. [...] The experiment, too, is on the grandest scale. No fewer than three hundred thousand people of both sexes, of every age and occupation, and of every rank and station, from gentlefolks down to the very poor, were divided into two groups without their choice, and in most cases, without their knowledge; one group supplied with water containing the sewage of London, and amongst it, whatever might have come from the cholera patients, the other group having water quite free from such impurity.
+
+---
+background-image: url("../../img/snow-supply.jpg")
+background-size: cover
+
+# London Water Supply
+
+---
+
+# Proposing an IV
+
+* Snow is proposing an **instrumental variable** `\(z_i\)`, the *identity of the water supplying company* to household `\(i\)`:
+
+More formally, let's define the instrument as follows:
+
+`\begin{align*}
+z_i &amp;=  \begin{cases}
+                    1 &amp; \text{if water supplied by Lambeth} \\
+                    0 &amp; \text{if water supplied by Southwark or Vauxhall.} \\
+                 \end{cases} \\
+\end{align*}`
+
+* `\(z_i\)` is highly correlated with the water purity `\(w_i\)`. 
+
+* However, it seems to be uncorrelated with all the other factors in `\(u_i\)`, which worried us before: Water supply was decided years before, and now houses on the same street have different suppliers!
+
+---
+background-image: url(../../img/IV-dag.png)
+background-position: 60% 50%
+
+# Simple IV in a DAG
+
+* `\(u\)` affects both outcome and explanatory variable
+
+
+
+---
+
+# Defining Snow's IV Formally
+
+
+
+--
+
+Here are the conditions for a valid instrument:
+
+1. **Relevance** or **First Stage**: Water purity is indeed a function of supplier identity. We want that `$$E[w_i | z_i = 1] \neq E[w_i | z_i = 0]$$` i.e. the average water purity differs across suppliers. We can *verify* this condition with observational data. We want this effect to be reliably causal.
+
+--
+
+2. **Independence**: Whether a household has `\(z_i = 1\)` or `\(z_i = 0\)` is unrelated to `\(u\)`, hence *as good as random*. Whether we condition `\(u\)` on certain values of `\(z\)` does not change the result - we want `$$E[u_i | z_i = 1] = E[u_i | z_i = 0].$$`
+
+--
+
+3. **Excludability** the instrument should affect the outcome `\(c\)` *only* through the specified channel (i.e. via water purity `\(w\)`), and nothing else.
+
+
+---
+
+# Defining the IV Estimator
+
+We are now ready to define a simple IV estimator. Like before, let's condition on the values of `\(z\)`:
+
+`\begin{align}
+E[c_i | z_i = 1] &amp;= \alpha + \delta E[w_i | z_i = 1] + E[u_i | z_i = 1] \\
+E[c_i | z_i = 0] &amp;= \alpha + \delta E[w_i | z_i = 0] + E[u_i | z_i = 0]
+\end{align}`
+
+which upon differencing both lines gives 
+
+`\begin{align}
+E[c_i | z_i = 1] - E[c_i | z_i = 0] &amp;= \delta  \left\{ E[w_i | z_i = 1] - E[w_i | z_i = 0]\right\} \\
+&amp;+ \underbrace{\left\{ E[u_i | z_i = 1] - E[u_i | z_i = 0] \right\}}_{=0 \text{ by Exogeneity Assumption}}
+\end{align}`
+
+--
+
+* Finally, if the IV is *relevant*, i.e. `\(E[w_i | z_i = 1] - E[w_i | z_i = 0] \neq 0\)`:
+
+`\begin{equation}
+\delta = \frac{E[c_i | z_i = 1] - E[c_i | z_i = 0]}{E[w_i | z_i = 1] - E[w_i | z_i = 0]} (\#eq:IV)
+\end{equation}`
+
+
+---
+
+# Special Case: Wald Estimator
+
+Let's say that `\(x \mapsto y\)` means that `\(x\)` is an estimate for `\(y\)`:
+
+1. `\(\overline{c}_1 \mapsto E[c_i | z_i = 1]\)`: the proportion of households supplied by Lambeth with cholera.
+1. `\(\overline{w}_1 \mapsto E[w_i | z_i = 1]\)`: the proportion of households supplied by Lambeth with bad water.
+1. `\(\overline{c}_0 \mapsto E[c_i | z_i = 0]\)`: the proportion of households not supplied by Lambeth with cholera.
+1. `\(\overline{w}_0 \mapsto E[w_i | z_i = 0]\)`: the proportion of households not supplied by Lambeth with bad water.
+
+The estimator would then be
+
+`\begin{equation}
+\hat{\delta} = \frac{\overline{c}_1 - \overline{c}_0}{\overline{w}_1 - \overline{w}_0} 
+\end{equation}`
+
+In this special case where all involved variables `\(c,w,z\)` are binary, the estimator is called the *Wald estimator*.
+
+---
+
+**Summary**: IVs are a powerful tool to establish causality in contexts with observational data only and where we are concerned that the conditional mean assumption `\(E[u_i | x_i]=0\)` is violated, hence, we cannot say *all else equal, as `\(x\)` changes, `\(y\)` changes like this and that*. Then we say that `\(x\)` is *endogenous*. The key features of IV `\(z\)` are that 
+
+1. `\(z\)` is *relevant* for `\(x\)`. For example, in a simple regression of `\(z\)` on `\(x\)`, we want `\(z\)` to have considerable predictive power. We can *test* this condition in data.
+2. We need a theory according to which is *reasonable* to assume that `\(z\)` is *unrelated* to other unobservable factors that might impact the outcome. Hence, `\(z\)` is *exogenous* to `\(u\)`, or `\(E[u | z] = 0\)`. This is an **assumption** (i.e. we can not test this with data).
+
+
+---
+
+
+class: title-slide-final, middle
+background-image: url(../img/logo/ScPo-econ.png)
+background-size: 250px
+background-position: 9% 19%
+
+# END
+
+
+
+
+|                                                                                                            |                                   |
+| :--------------------------------------------------------------------------------------------------------- | :-------------------------------- |
+| &lt;a href="mailto:florian.oswald@sciencespo.fr"&gt;.ScPored[&lt;i class="fa fa-paper-plane fa-fw"&gt;&lt;/i&gt;]               | florian.oswald@sciencespo.fr       |
+| &lt;a href="https://github.com/ScPoEcon/Advanced-Metrics-slides"&gt;.ScPored[&lt;i class="fa fa-link fa-fw"&gt;&lt;/i&gt;] | Slides |
+| &lt;a href="https://scpoecon.github.io/ScPoEconometrics"&gt;.ScPored[&lt;i class="fa fa-link fa-fw"&gt;&lt;/i&gt;] | Book |
+| &lt;a href="http://twitter.com/ScPoEcon"&gt;.ScPored[&lt;i class="fa fa-twitter fa-fw"&gt;&lt;/i&gt;]                          | @ScPoEcon                         |
+| &lt;a href="http://github.com/ScPoEcon"&gt;.ScPored[&lt;i class="fa fa-github fa-fw"&gt;&lt;/i&gt;]                          | @ScPoEcon                       |
+
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script src="../../js/ru_xaringan.js"></script>
+<script>var slideshow = remark.create({
+"highlightStyle": "github",
+"highlightLines": true,
+"countIncrementalSlides": false,
+"ratio": "16:9"
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>
