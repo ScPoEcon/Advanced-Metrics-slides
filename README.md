@@ -10,7 +10,7 @@ Lecture 1: Introduction, Logistics and Recap 1 from intro course [[HTML](https:/
 
 Lecture 2: Recap 2 from intro course [[HTML](https://raw.githack.com/ScPoEcon/Advanced-Metrics-slides/master/lectures/02-recap/recap2.html)] + intro to data.table [[HTML](https://raw.githack.com/ScPoEcon/Advanced-Metrics-slides/master/lectures/03-datatable/03-datatable.html)]
 
-Session 3: Instrumental Variables and Causality 1
+Session 3: Instrumental Variables and Causality 1 [[HTML](https://raw.githack.com/ScPoEcon/Advanced-Metrics-slides/master/lectures/04-IV/04-IV.html)]
 
 Session 4: Instrumental Variables and Causality 2
 
