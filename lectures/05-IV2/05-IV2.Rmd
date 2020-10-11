@@ -1,0 +1,1056 @@
+---
+title: "ScPoEconometrics: Advanced"
+subtitle: "Instrumental Variables - Applications"
+author: "Florian Oswald"
+date: "SciencesPo Paris </br> `r Sys.Date()`"
+output:
+  xaringan::moon_reader:
+    lib_dir: libs
+    css: [default, "../../css/scpo.css", "../../css/scpo-fonts.css"]
+    nature:
+      beforeInit: ["../../js/ru_xaringan.js"]
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+      ratio: "16:9"
+    includes:
+      in_header: ["../../libs/partials/header.html"]
+---
+
+layout: true
+
+<div class="my-footer"><img src="../../img/logo/ScPo-shield.png" style="height: 60px;"/></div> 
+
+---
+
+```{r setup, include=FALSE,warning=FALSE,message=FALSE}
+options(htmltools.dir.version = FALSE)
+knitr::opts_chunk$set(
+  message = FALSE,
+  warning = FALSE,
+  dev = "svg",
+  cache = TRUE,
+  fig.align = "center"
+  #fig.width = 11,
+  #fig.height = 5
+)
+
+# define vars
+library(magrittr)
+library(broom)
+library(estimatr)
+library(modelsummary)
+gm = modelsummary::gof_map
+gm$omit <- TRUE
+gm$omit[gm$clean == "R2"] <- FALSE
+gm$omit[gm$clean == "Num.Obs."] <- FALSE
+gom = "p.value.|se_type|statistic.end|statistic.overid|statistic.weakinst"
+
+```
+
+# Status
+
+.pull-left[
+
+## What Did we Do Last Week?
+
+* We learned about John Snow's grand experiment in London 1850.
+
+* We used his story to motivate the IV estimator.
+
+* You took a quiz about some IV aspects.
+
+]
+
+
+--
+
+.pull-right[
+
+## Today
+
+* We'll look at further IV applications.
+
+* We introduce an extension called *Two Stage Least Squares*.
+
+* We will use `R` to compute the estimates.
+
+* Finally we'll talk about *weak* instruments.
+
+]
+
+
+
+---
+
+layout: false
+class: separator, middle
+
+# Prologue
+
+## One cool `R` package a day, keeps the doctor away...
+
+---
+layout: false
+
+# [`Rayshader`](https://www.rayshader.com)
+
+* Can *raytrace* all kinds of elevation data.
+* Can *also* make most `ggplot`s come to 3D-life!
+
+<video width="100%" height="50%" controls id="my_video">
+    <source src="https://www.tylermw.com/wp-content/uploads/2019/05/deathappended2.mp4" type="video/mp4">
+</video>
+
+---
+
+# [`Rayshader`](https://www.rayshader.com)
+
+* This is all it takes:
+
+```{r,eval = FALSE,echo = TRUE}
+library(ggplot2)
+library(rayshader)
+#Data from Social Security administration
+death = read_csv("https://www.tylermw.com/data/death.csv", skip = 1)
+meltdeath = reshape2::melt(death, id.vars = "Year")
+
+meltdeath$age = as.numeric(meltdeath$variable)
+
+# make a ggplot
+deathgg = ggplot(meltdeath) +
+  geom_raster(aes(x=Year,y=age,fill=value)) +
+  scale_x_continuous("Year",expand=c(0,0),breaks=seq(1900,2010,10)) +
+  scale_y_continuous("Age",expand=c(0,0),breaks=seq(0,100,10),limits=c(0,100)) +
+  scale_fill_viridis("Death\nProbability\nPer Year",
+       trans = "log10",breaks=c(1,0.1,0.01,0.001,0.0001), 
+       labels = c("1","1/10","1/100","1/1000","1/10000")) +
+  ggtitle("Death Probability vs Age and Year for the USA") +
+  labs(caption = "Data Source: US Dept. of Social Security")
+
+# give it to rayshader
+plot_gg(deathgg, multicore=TRUE,height=5,width=6,scale=500)
+```
+
+* Amazing, right? 🎉 🎊
+
+---
+
+layout: false
+class: separator, middle
+
+# Back to school!
+
+---
+layout: true
+
+<div class="my-footer"><img src="../../img/logo/ScPo-shield.png" style="height: 60px;"/></div> 
+
+---
+
+# Returns To Schooling
+
+.pull-left[
+* What's the causal impact of schooling on earnings?
+
+* [Jacob Mincer](https://en.wikipedia.org/wiki/Jacob_Mincer) was interested in this important question.
+
+* Here's his model:
+
+$$
+\log Y_i = \alpha + \rho S_i + \beta_1 X_i + \beta_2 X_i^2 + e_i
+$$
+]
+
+
+.pull-right[
+```{r mincer,warning = FALSE,message = FALSE,echo = FALSE, fig.height=6 }
+library(ggdag)
+library(dplyr)
+coords <- list(
+    x = c(e = 1, x = 2, y = 3, s = 2),
+    y = c(e=0, x = -.5, y = 0, s = 0.5)
+    )
+
+dag <- dagify(y ~ s,
+              y ~ e,
+              y ~ x, coords = coords)
+dag %>% 
+  tidy_dagitty() %>% 
+  mutate(linetype = ifelse(name == "e", "dashed", "solid")) %>%
+  ggplot(aes(x = x, y = y, xend = xend, yend = yend)) + 
+  geom_dag_point() + 
+  geom_dag_text() + 
+  geom_dag_edges(aes(edge_linetype = linetype), show.legend = FALSE) + 
+  scale_x_continuous(limits = c(0,4))+
+  theme_void()
+
+```
+]
+
+---
+
+# Returns To Schooling
+
+.pull-left[
+$$
+\log Y_i = \alpha + \rho S_i + \beta_1 X_i + \beta_2 X_i^2 + e_i
+$$
+
+* He found an estimate for $\rho$ of about 0.11, 
+
+* 11% earnings advantage for each additional year of education
+
+* Look at the DAG. Is that a good model? Well, why would it not be? 
+]
+
+
+.pull-right[
+```{r mincer2,warning = FALSE,message = FALSE,echo = FALSE, fig.height=6 }
+library(ggdag)
+library(dplyr)
+coords <- list(
+    x = c(e = 1, x = 2, y = 3, s = 2),
+    y = c(e=0, x = -.5, y = 0, s = 0.5)
+    )
+
+dag <- dagify(y ~ s,
+              y ~ e,
+              y ~ x, coords = coords)
+dag %>% 
+  tidy_dagitty() %>% 
+  mutate(linetype = ifelse(name == "e", "dashed", "solid")) %>%
+  ggplot(aes(x = x, y = y, xend = xend, yend = yend)) + 
+  geom_dag_point() + 
+  geom_dag_text() + 
+  geom_dag_edges(aes(edge_linetype = linetype), show.legend = FALSE) + 
+  scale_x_continuous(limits = c(0,4))+
+  theme_void()
+
+```
+]
+
+---
+
+# Ability Bias
+
+.pull-left[
+* We compare earnings of men with certain schooling and work experience
+
+* Is all else equal, after controlling for those?
+
+* Given $X$, 
+    * Can we find differently diligent workers out there? 
+    * Can we find differently able workers?
+    * Do family connections of workers vary?
+]
+
+--
+
+.pull-right[
+* Yes, of course. So, *all else* is not equal at all.
+
+* That's an issue, because for OLS consistency we require the orthogonality assumption 
+$$E[e_i | S_i, X_i] \neq 0$$
+
+* Let's introduce **ability** $A_i$ explicitly.
+]
+
+
+---
+
+# Mincer with Unobserved Ability
+
+.pull-left[
+* In fact we have *two* unobservables: $e$ and $A$.
+
+* Of course we can't tell them apart.
+
+* So we defined a new unobservable factor 
+$$u_i = e_i + A_i$$
+
+]
+
+--
+
+.pull-right[
+
+```{r mincer3,warning = FALSE,message = FALSE,echo = FALSE,fig.height = 6 }
+coords <- list(
+    x = c(e_A = 1, x = 2, y = 3, s = 2),
+    y = c(e_A =0, x = -.5, y = 0, s = 0.5)
+    )
+
+dag <- dagify(y ~ s,
+              y ~ e_A,
+              s ~ e_A,
+              y ~ x,coords = coords)
+d = dag %>% 
+  tidy_dagitty() %>% 
+  dag_label(labels = c("y" = "y","s" = "s","x" = "x","e_A"= "u=e+A")) %>%
+  mutate(linetype = ifelse(label == "u=e+A", "dashed", "solid")) %>%
+  ggplot(aes(x = x, y = y, xend = xend, yend = yend)) + 
+  geom_dag_point() + 
+  geom_dag_text(aes(label=label)) + 
+  geom_dag_edges(aes(edge_linetype = linetype), show.legend = FALSE) + 
+  scale_x_continuous(limits = c(0,4))+
+  theme_void()
+d
+```
+]
+
+---
+
+# Mincer with Unobserved Ability
+
+.pull-left[
+* In terms of an equation:
+$$\log Y_i = \alpha + \rho S_i + \beta_1 X_i + \beta_2 X_i^2 + \underbrace{u_i}_{A_i + e_i}$$
+
+* Sometimes, this does not matter, and the OLS bias is small.
+
+* But sometimes it does and we get it totally wrong! Example.
+
+]
+
+
+.pull-right[
+
+```{r mincer4,warning = FALSE,message = FALSE,echo = FALSE,fig.height = 6 }
+coords <- list(
+    x = c(e_A = 1, x = 2, y = 3, s = 2),
+    y = c(e_A =0, x = -.5, y = 0, s = 0.5)
+    )
+
+dag <- dagify(y ~ s,
+              y ~ e_A,
+              s ~ e_A,
+              y ~ x,coords = coords)
+d = dag %>% 
+  tidy_dagitty() %>% 
+  dag_label(labels = c("y" = "y","s" = "s","x" = "x","e_A"= "u=e+A")) %>%
+  mutate(linetype = ifelse(label == "u=e+A", "dashed", "solid")) %>%
+  ggplot(aes(x = x, y = y, xend = xend, yend = yend)) + 
+  geom_dag_point() + 
+  geom_dag_text(aes(label=label)) + 
+  geom_dag_edges(aes(edge_linetype = linetype), show.legend = FALSE) + 
+  scale_x_continuous(limits = c(0,4))+
+  theme_void()
+d
+```
+]
+
+---
+
+# Angrist and Krueger (1991): Birthdate is as good as Random
+
+
+.pull-left[
+* Angrist and Krueger (AK91) is an influental study addressing ability bias.
+
+* Idea: 
+    1. construct an IV that encodes *birth date of student*.
+    1. Child born just after cutoff date will start school later!
+    
+* Suppose all children who reach the age of 6 by 31st of december 2021 are required to enroll in the first grade of school in september 2021.
+]
+
+--
+
+.pull-right[
+* If born in September 2015 (i.e. 6 years prior), will be 5 years and 3/4 by the time they start school.
+
+* If born on the 1st of January 2016 will be 6 and 3/4 years when *they* enter school in september 2022.
+
+* However, people can drop out of school legally on their 16-th birthday! 
+
+* So, out of people who drop out, some got more schooling than others.
+
+* AK91 construct IV *quarter of birth* dummy: affects schooling, but not related to $A$!
+]
+
+---
+
+# AK91 IV setup
+
+.pull-left[
+* *quarter of birth* dummy $z$: affects schooling, but not related to $A$!
+
+* In particular: whether born in 4-th quarter or not.
+
+]
+
+.pull-right[
+
+```{r ak-mod,echo = FALSE,fig.height=5}
+coords <- list(
+    x = c(e_A = 1, z = 1, y = 3, s = 2),
+    y = c(e_A =0, z = 0.5, y = 0, s = 0.5)
+    )
+
+dag <- dagify(y ~ s,
+              y ~ e_A,
+              s ~ e_A,
+              s ~ z,coords = coords)
+d = dag %>% 
+  tidy_dagitty() %>% 
+  dag_label(labels = c("y" = "y","s" = "s","z" = "z","e_A"= "u=e+A")) %>%
+  mutate(linetype = ifelse(label == "u=e+A", "dashed", "solid")) %>%
+  ggplot(aes(x = x, y = y, xend = xend, yend = yend)) + 
+  geom_dag_point() + 
+  geom_dag_text(aes(label=label)) + 
+  geom_dag_edges(aes(edge_linetype = linetype), show.legend = FALSE) + 
+  scale_x_continuous(limits = c(0,4))+
+  theme_void()
+d
+```
+]
+
+---
+
+# AK91 Estimation: Two Stage Least Squares (2SLS)
+
+AK91 allow us to introduce a widely used variation of our simple IV estimator: **2SLS**
+
+1. We estimate a **first stage model** which uses only exogenous variables (like $z$) to explain our endgenous regressor $s$.
+
+2. We then use the first stage model to *predict* values of $s$ in what is called the **second stage** or the **reduced form** model. Performing this procedure is supposed to take out any impact of $A$ in the correlation we observe in our data between $s$ and $y$.
+
+\begin{align}
+\text{1. Stage: }s_i &= \alpha_0 + \alpha_1 z_i + \eta_i \\ 
+\text{2. Stage: }y_i &= \beta_0 + \beta_1 \hat{s}_i + u_i 
+\end{align}
+
+**Conditions:**
+
+1. Relevance of the IV: $\alpha_1 \neq 0$
+1. Independence (IV assignment as good as random): $E[\eta | z] = 0$
+1. Exogeneity (our exclusion restriction): $E[u | z] = 0$
+
+
+---
+layout: false
+class: separator, middle
+
+# Let's do Angrist and Krueger (1991)! 
+
+---
+layout: true
+
+<div class="my-footer"><img src="../../img/logo/ScPo-shield.png" style="height: 60px;"/></div> 
+
+---
+
+# Data on birth quarter and wages
+
+Let's load the data and look at a quick summary
+
+```{r ak-data}
+data("ak91", package = "masteringmetrics")
+# from the modelsummary package
+datasummary_skim(data.frame(ak91),histogram = TRUE)
+```
+
+---
+
+# AK91 Data Transformations
+
+* We want to create the `q4` dummy which is `TRUE` if you are born in the 4th quarter.
+
+* create `factor` versions of quarter and year of birth.
+
+```{r}
+ak91 <- mutate(ak91,
+               qob_fct = factor(qob),
+               q4 = as.integer(qob == "4"),
+               yob_fct = factor(yob))
+# get mean wage by year/quarter
+ak91_age <- ak91 %>%
+  group_by(qob, yob) %>%
+  summarise(lnw = mean(lnw), s = mean(s)) %>%
+  mutate(q4 = (qob == 4))
+```
+
+---
+
+# AK91 Figure 1: First Stage!
+
+Let's reproduce AK91's first figure now on education as a function of quarter of birth!
+
+```{r,eval = FALSE,echo = TRUE}
+ggplot(ak91_age, aes(x = yob + (qob - 1) / 4, y = s )) +
+  geom_line() + 
+  geom_label(mapping = aes(label = qob, color = q4)) +
+  guides(label = FALSE, color = FALSE) +
+  scale_x_continuous("Year of birth", breaks = 1930:1940) +
+  scale_y_continuous("Years of Education", breaks = seq(12.2, 13.2, by = 0.2),
+                     limits = c(12.2, 13.2)) +
+  theme_bw()
+
+```
+
+---
+
+# AK91 Figure 1: First Stage!
+
+.left-thin[
+<br>
+<br>
+1. The numbers label mean education *by* quarter of birth groups.
+
+1. The 4-th quarters **did** get more education in most years!
+
+1. There is a general trend.
+
+]
+
+.right-wide[
+```{r ak91-dummy,eval = TRUE,echo = FALSE,fig.height = 5}
+ggplot(ak91_age, aes(x = yob + (qob - 1) / 4, y = s )) +
+  geom_line() + 
+  geom_label(mapping = aes(label = qob, color = q4)) +
+  guides(label = FALSE, color = FALSE) +
+  scale_x_continuous("Year of birth", breaks = 1930:1940) +
+  scale_y_continuous("Years of Education", breaks = seq(12.2, 13.2, by = 0.2),
+                     limits = c(12.2, 13.2)) +
+  theme_bw()
+
+```
+]
+
+---
+
+# AK91 Figure 2: Impact of IV on outcome
+
+What about earnings for those groups?
+
+
+```{r,eval = FALSE}
+ggplot(ak91_age, aes(x = yob + (qob - 1) / 4, y = lnw)) +
+  geom_line() +
+  geom_label(mapping = aes(label = qob, color = q4)) +
+  scale_x_continuous("Year of birth", breaks = 1930:1940) +
+  scale_y_continuous("Log weekly wages") +
+  guides(label = FALSE, color = FALSE) +  
+  theme_bw()
+```
+
+---
+
+# AK91 Figure 2: Impact of IV on outcome
+
+
+.left-thin[
+<br>
+<br>
+<br>
+1. The 4-th quarters are among the high-earners by birth year.
+
+1. In general, weekly wages seem to decline somewhat over time.
+
+]
+
+.right-wide[
+
+```{r ak91-wage,echo = FALSE,fig.height = 5}
+ggplot(ak91_age, aes(x = yob + (qob - 1) / 4, y = lnw)) +
+  geom_line() +
+  geom_label(mapping = aes(label = qob, color = q4)) +
+  scale_x_continuous("Year of birth", breaks = 1930:1940) +
+  scale_y_continuous("Log weekly wages") +
+  guides(label = FALSE, color = FALSE) +  
+  theme_bw()
+```
+]
+
+---
+
+# Running IV estimation in `R`
+
+<br>
+<br>
+
+.pull-left[
+* Several options (like always with `R`! 😉)
+
+* Will use the [`iv_robust`](https://declaredesign.org/r/estimatr/reference/iv_robust.html) function from the `estimatr` package.
+
+* *Robust*? Computes standard errors which are correcting for heteroskedasticity. [Details here.](https://declaredesign.org/r/estimatr/articles/mathematical-notes.html)
+]
+
+
+.pull-right[
+```{r}
+library(estimatr)
+# create a list of models
+mod <- list()
+
+# standard (biased!) OLS
+mod$ols <- lm(lnw ~ s, data = ak91)
+
+# IV: born in q4 is TRUE?
+# doing IV manually in 2 stages.
+mod[["1. stage"]] <- lm(s ~ q4, data = ak91)
+ak91$shat         <- predict(mod[["1. stage"]])  
+mod[["2. stage"]] <- lm(lnw ~ shat, data = ak91)
+
+# run 2SLS
+# doing IV all in one go
+# notice the formula!
+# formula = y ~ x | z
+mod$`2SLS`  <- iv_robust(lnw ~ s | q4,
+                                   data = ak91 )
+```
+]
+
+---
+count: false
+
+# Running IV estimation in `R`
+
+<br>
+<br>
+
+.pull-left[
+* Several options (like always with `R`! 😉)
+
+* Will use the [`iv_robust`](https://declaredesign.org/r/estimatr/reference/iv_robust.html) function from the `estimatr` package.
+
+* *Robust*? Computes standard errors which are correcting for heteroskedasticity. [Details here.](https://declaredesign.org/r/estimatr/articles/mathematical-notes.html)
+
+* Notice the `predict` to get $\hat{s}$.
+]
+
+
+.pull-right[
+```{r,eval = FALSE}
+library(estimatr)
+# create a list of models
+mod <- list()
+
+# standard (biased!) OLS
+mod$ols <- lm(lnw ~ s, data = ak91)
+
+# IV: born in q4 is TRUE?
+# doing IV manually in 2 stages.
+mod[["1. stage"]] <- lm(s ~ q4, data = ak91)
+ak91$shat         <- predict(mod[["1. stage"]]) #<<
+mod[["2. stage"]] <- lm(lnw ~ shat, data = ak91)
+
+# run 2SLS
+# doing IV all in one go
+# notice the formula!
+# formula = y ~ x | z
+mod$`2SLS`  <- iv_robust(lnw ~ s | q4,
+                                   data = ak91 )
+```
+]
+
+---
+
+# AK91 Results Table
+
+.left-wide[
+```{r ms1,echo = FALSE}
+library(huxtable)
+tab = msummary(models = mod,
+                       stars = TRUE,
+                       statistic = 'std.error',
+                       gof_map = gm,gof_omit = gom,
+               output = "huxtable"
+         )
+tab %>%
+  set_bottom_border(row = 9, col = everywhere) %>%
+  set_tb_padding(3.5)
+```
+]
+
+.right-thin[
+1. OLS likely downward biased (measurement error in schooling)
+
+1. First Stage: IV `q4` is statistically significant, but small effect: born in q4 has 0.092 years of educ. $R^2$ is 0%!
+
+1. Second stage has same point estimate as `2SLS` but different std error (2. stage one is wrong)
+
+]
+
+---
+
+# Additional Control Variables
+
+We saw in figure \@ref(fig:ak91-age) that there is a clear time trend in years of schooling. There are also business-cycle fluctuations in earnings, even if we were not able to see them from the graph above. It is probably a good idea to control for calendar year in order to guard against any time effects in our results. Also, we can use more than one IV! Here is how:
+
+---
+
+# Additional Control Variables
+
+
+```{r}
+# we keep adding to our `mod` list:
+mod$ols_yr  <- update(mod$ols, . ~ . + yob_fct)  #  previous OLS model
+# add exogenous vars on both sides of the `|` !
+mod[["2SLS_yr"]] <- estimatr::iv_robust(lnw ~ s  + yob_fct | q4 + yob_fct, data = ak91 )  
+# use all quarters as IVs
+mod[["2SLS_all"]] <- estimatr::iv_robust(lnw ~ s  + yob_fct | qob_fct + yob_fct, data = ak91 )
+```
+
+
+```{r,echo = FALSE}
+# here is how to make the table:
+rows <- data.frame(term = c("Instruments","Year of birth"),
+                   ols  = c("none","no"),
+                   SLS  = c("Q4","no"),
+                   ols_yr  = c("none","yes"),
+                   SLS_yr  = c("Q4","yes"),
+                   SLS_all  = c("All Quarters","yes")
+                   )
+names(rows)[c(3,5,6)] <- c("2SLS","2SLS_yr","2SLS_all")
+tab = msummary(models = mod[c("ols","2SLS","ols_yr","2SLS_yr","2SLS_all")], 
+                       statistic = 'std.error',
+                       gof_omit = 'DF|Deviance|AIC|BIC|R2 Adj.|F|p.value|se_type|statistic|Log.Lik.|Num.Obs.|N',
+               add_rows = rows,
+               coef_omit = 'yob_fct',
+               output = 'huxtable')
+
+htab = tab %>%
+  set_bottom_border(row = 6, col = everywhere) %>%
+  set_bold(1, everywhere) %>%
+  set_tb_padding(4)
+
+htab
+```
+
+---
+
+# Additional Control Variables
+
+.left-wide[
+```{r,echo = FALSE}
+htab
+```
+]
+
+.pull-right[
+
+]
+
+---
+
+layout: false
+class: separator, middle
+
+# Mechanics of IV
+
+## Identification and Inference
+
+
+---
+
+# IV Identification
+
+Let's go back to our simple linear model:
+
+$$
+y = \beta_0 + \beta_1 x + u
+$$
+
+where we fear that $Cov(x,u) \neq 0$, $x$ is *endogenous*.
+
+## Conditions for IV
+
+1. **first stage** or **relevance**: $Cov(z,x) \neq 0$
+2. **IV exogeneity**: $Cov(z,u) = 0$: the IV is exogenous in the outcome equation.
+
+---
+
+# Valid Model (A) vs Invalid Model (B) for IV `z`
+
+```{r IV-dag2,warning = FALSE,message = FALSE,echo = FALSE,fig.height = 3.5 }
+coords <- list(
+    x = c(z = 1, x = 3, u = 4, y = 5),
+    y = c(z = 0, x = 0, u = 0.5, y = 0)
+    )
+
+dag1 <- dagify(y ~ x + u,
+              x ~ z + u, coords = coords)
+
+d1 = dag1 %>% 
+  tidy_dagitty() %>% 
+  mutate(linetype = ifelse(name == "u", "dashed", "solid")) %>% 
+  ggplot(aes(x = x, y = y, xend = xend, yend = yend)) + 
+  geom_dag_point() + 
+  geom_dag_text() + 
+  geom_dag_edges(aes(edge_linetype = linetype), show.legend = FALSE) + 
+  theme_void()
+
+dag2 <- dagify(y ~ x + u,
+              x ~ z + u, 
+              z ~ u, coords = coords)
+
+d2 = dag2 %>% 
+  tidy_dagitty() %>% 
+  mutate(linetype = ifelse(name == "u", "dashed", "solid")) %>% 
+  ggplot(aes(x = x, y = y, xend = xend, yend = yend)) + 
+  geom_dag_point() + 
+  geom_dag_text() + 
+  geom_dag_edges(aes(edge_linetype = linetype), show.legend = FALSE) + 
+  theme_void()
+cowplot::plot_grid(d1,NULL,d2,nrow = 1
+  , rel_widths = c(1, 0.15, 1)
+  , labels = c("(A)", "", "(B)"))
+```
+
+---
+
+# IV Identification
+
+.pull-left[
+
+>## Conditions for IV
+
+>1. **first stage** or **relevance**: $Cov(z,x) \neq 0$
+>2. **IV exogeneity**: $Cov(z,u) = 0$: the IV is exogenous in the outcome equation.
+
+]
+
+.pull-right[
+
+* How does this *identify* $\beta_1$?
+
+* (How can we express $\beta_1$ in terms of population moments to pin it's value down?)
+
+]
+
+---
+
+# IV Identification
+
+
+
+\begin{align}
+Cov(z,y) &= Cov(z, \beta_0 + \beta_1 x + u) \\
+         &= \beta_1 Cov(z,x) + Cov(z,u) 
+\end{align}
+
+.pull-left[
+Under condition 2. above (*IV exogeneity*), we have $Cov(z,u)=0$, hence
+
+$$
+Cov(z,y) = \beta_1 Cov(z,x) 
+$$
+]
+
+--
+
+.pull-right[
+and under condition 1. (*relevance*), we have $Cov(z,x)\neq0$, so that we can divide the equation through to obtain
+
+$$
+\beta_1 =  \frac{Cov(z,y)}{Cov(z,x)}.
+$$
+* $\beta_1$ is *identified* via population moments $Cov(z,y)$ and $Cov(z,x)$. 
+
+* We can *estimate* those moments via their *sample analogs*
+]
+
+---
+
+# IV Estimator
+
+Just plugging in for the population moments:
+
+$$\hat{\beta}_1 = \frac{\sum_{i=1}^n (z_i - \bar{z})(y_i - \bar{y})}{\sum_{i=1}^n (z_i - \bar{z})(x_i - \bar{x})}$$
+
+* The intercept estimate is $\hat{\beta}_0 = \bar{y} - \hat{\beta}_1 \bar{x}$ 
+
+--
+
+* Given both assumptions 1. and 2. are satisfied, we say that *the IV estimator is consistent for $\beta_1$*. We write
+
+$$
+\text{plim}(\hat{\beta}_1) = \beta_1
+$$
+
+in words: the *probability limit* of $\hat{\beta}_1$ is the true $\beta_1$. 
+
+* If this is true, we say that this estimator is **consistent**.
+
+---
+
+# IV Inference
+
+Assuming $E(u^2|z) = \sigma^2$ the variance of the IV slope estimator is
+
+$$Var(\hat{\beta}_{1,IV}) = \frac{\sigma^2}{n \sigma_x^2 \rho_{x,z}^2}$$
+
+* $\sigma_x^2$ is the population variance of $x$, 
+
+* $\sigma^2$ the one of $u$, and  
+
+* $\rho_{x,z}$ is the population correlation between $x$ and $z$.
+
+--
+
+You can see 2 important things here:
+
+1. Without the term $\rho_{x,z}^2$, this is **like OLS variance**.
+2. As sample size $n$ increases, the **variance decreases**.
+
+---
+
+# IV Variance is Always Larger than OLS Variance
+
+* Replace $\rho_{x,z}^2$ with $R_{x,z}^2$, i.e. the R-squared of a regression of $x$ on $z$:
+
+$$Var(\hat{\beta}_{1,IV}) = \frac{\sigma^2}{n \sigma_x^2 R_{x,z}^2}$$
+
+1. Given $R_{x,z}^2 < 1$ in most real life situations, we have that $Var(\hat{\beta}_{1,IV}) > Var(\hat{\beta}_{1,OLS})$ almost certainly.
+
+--
+
+1. The higher the correlation between $z$ and $x$, the closer their $R_{x,z}^2$ is to 1. With $R_{x,z}^2 = 1$ we get back to the OLS variance. This is no surprise, because that implies that in fact $z = x$.
+
+So, if you have a valid, exogenous regressor $x$, you should *not* perform IV estimation using $z$ to obtain $\hat{\beta}$, since your variance will be unnecessarily large.
+
+---
+
+# Returns to Education for Married Women
+
+Consider the following model for married women's wages:
+
+$$
+\log wage = \beta_0 + \beta_1 educ + u
+$$
+Let's run an OLS on this, and then compare it to an IV estimate using *father's education*. Keep in mind that this is a valid IV $z$ if 
+
+1. *fatheduc* and *educ* are correlated
+2. *fatheduc* and $u$ are not correlated.
+
+---
+
+# Returns to Education for Married Women
+
+
+```{r mroz1,echo = TRUE}
+data(mroz,package = "wooldridge")
+mods = list()
+mods$OLS <- lm(lwage ~ educ, data = mroz)
+mods[['First Stage']] <- lm(educ ~ fatheduc, data = subset(mroz, inlf == 1))
+mods$IV  <- estimatr::iv_robust(lwage ~ educ | fatheduc, data = mroz)
+```
+
+```{r,echo = FALSE}
+modelsummary::modelsummary(mods, gof_map = gm, gof_omit = gom,output = "huxtable") %>%
+  set_bottom_border(row = 7, col = everywhere) %>%
+  set_bold(1, everywhere) %>%
+  set_tb_padding(5)
+
+```
+
+---
+
+# IV Standard Errors
+
+```{r se-plot,echo = FALSE,fig.height=5}
+coefs_ols = broom::tidy(mods$OLS, conf.int = TRUE)
+coefs_IV = broom::tidy(mods$IV, conf.int = TRUE)
+
+bind_rows(
+  coefs_ols %>% filter(term == "educ") %>% mutate(estimator = "OLS"),
+  coefs_IV %>% filter(term == "educ") %>% mutate(estimator = "IV")
+  ) %>%
+  ggplot(aes(x=estimator, y=estimate, ymin=conf.low, ymax=conf.high)) +
+  geom_hline(yintercept = 0.0, color = "red", size =1.5) +
+  geom_pointrange() +
+  theme_bw()
+```
+
+---
+
+# IV with a Weak Instrument
+
+* IV is consistent under given assumptions.
+
+* However, *even if* we have only very small $Cor(z,u)$, we can get wrong-footed
+
+* Small corrleation between $x$ and $z$ can produce **inconsistent** estimates. 
+
+.pull-left[
+<br>
+<br>
+
+$$
+\text{plim}(\hat{\beta}_{1,IV}) = \beta_1 + \frac{Cor(z,u)}{Cor(z,x)} \cdot \frac{\sigma_u}{\sigma_x}
+$$
+]
+
+--
+
+.pull-right[
+* Take $Cor(z,u)$ is very small,
+* A **weak instrument** is one with only a small absolute value for $Cor(z,x)$ 
+* This will blow up this second term in the probability limit. 
+* Even with a very big sample size $n$, our estimator would *not* converge to the true population parameter $\beta_1$, because we are using a weak instrument.
+]
+
+---
+
+# Weak Stuff
+
+To illustrate this point, let's assume we want to look at the impact of number of packs of cigarettes smoked per day by pregnant women (*packs*) on the birthweight of their child (*bwght*):
+
+$$
+\log(bwght) = \beta_0 + \beta_1 packs + u
+$$
+
+We are worried that smoking behavior is correlated with a range of other health-related variables which are in $u$ and which could impact the birthweight of the child. So we look for an IV. Suppose we use the price of cigarettes (*cigprice*), assuming that the price of cigarettes is uncorrelated with factors in $u$. Let's run the first stage of *cigprice* on *packs* and then let's show the 2SLS estimates:
+
+
+---
+
+# Weak Stuff
+
+
+```{r bw}
+data(bwght, package = "wooldridge")
+mods <- list()
+mods[["First Stage"]] <- lm(packs ~ cigprice, data = bwght)
+mods[["IV"]] <- estimatr::iv_robust(log(bwght) ~  packs | cigprice, data = bwght)
+```
+
+```{r,echo = FALSE}
+modelsummary(mods, gof_map = gm, 
+             gof_omit = gom, output = "huxtable") %>%
+  set_bottom_border(row = 7, col = everywhere) %>%
+  set_bold(1, everywhere) %>%
+  set_tb_padding(5)
+```
+
+
+---
+
+The first column of table \@ref(tab:bw) shows that the first stage is *very* weak. The partial effect of *cigprice* on *packs* smoked is zero! People don't seem to care a great deal about the price of cigarettes (at least in the range of price variation observed in this dataset). The $R^2$ of that first stage is thus zero. What do we get if we use that IV nonetheless in a 2SLS estimation as in column 2? We get a huge coefficient of unexpected sign on *packs* (smoking more increases birthweight? 🤔), with very large standard error, so statistically speaking, we cannot distinguish this from zero. What is more important, however, is that even if they *were* significant, the estimates of column 2 are **invalid**. The *relevance* of the IV condition is clearly not satisfied, hence, invalid approach.  
+
+
+
+---
+
+
+class: title-slide-final, middle
+background-image: url(../img/logo/ScPo-econ.png)
+background-size: 250px
+background-position: 9% 19%
+
+# END
+
+
+
+
+|                                                                                                            |                                   |
+| :--------------------------------------------------------------------------------------------------------- | :-------------------------------- |
+| <a href="mailto:florian.oswald@sciencespo.fr">.ScPored[<i class="fa fa-paper-plane fa-fw"></i>]               | florian.oswald@sciencespo.fr       |
+| <a href="https://github.com/ScPoEcon/Advanced-Metrics-slides">.ScPored[<i class="fa fa-link fa-fw"></i>] | Slides |
+| <a href="https://scpoecon.github.io/ScPoEconometrics">.ScPored[<i class="fa fa-link fa-fw"></i>] | Book |
+| <a href="http://twitter.com/ScPoEcon">.ScPored[<i class="fa fa-twitter fa-fw"></i>]                          | @ScPoEcon                         |
+| <a href="http://github.com/ScPoEcon">.ScPored[<i class="fa fa-github fa-fw"></i>]                          | @ScPoEcon                       |
+
