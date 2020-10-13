@@ -1129,7 +1129,7 @@ modelsummary(mods, gof_omit = 'DF|Deviance|AIC|BIC|R2 Adj.|p.value|F$|se_type|st
 
 
 class: title-slide-final, middle
-background-image: url(../img/logo/ScPo-econ.png)
+background-image: url(../../img/logo/ScPo-econ.png)
 background-size: 250px
 background-position: 9% 19%
 
