@@ -599,7 +599,8 @@ mod[["2. stage"]] <- lm(lnw ~ shat, data = ak91)
 # notice the formula!
 # formula = y ~ x | z
 mod$`2SLS`  <- iv_robust(lnw ~ s | q4,
-                                   data = ak91 )
+                                   data = ak91,
+                         diagnostics = TRUE)
 ```
 ]
 
@@ -642,7 +643,8 @@ mod[["2. stage"]] <- lm(lnw ~ shat, data = ak91)
 # notice the formula!
 # formula = y ~ x | z
 mod$`2SLS`  <- iv_robust(lnw ~ s | q4,
-                                   data = ak91 )
+                         data = ak91,
+                         diagnostics = TRUE)
 ```
 ]
 
@@ -652,11 +654,20 @@ mod$`2SLS`  <- iv_robust(lnw ~ s | q4,
 
 .left-wide[
 ```{r ms1,echo = FALSE}
+glance_custom.iv_robust <- function(x){
+  f = x$diagnostic_first_stage_fstatistic
+  if (is.null(f)) {
+    return()
+  } else {
+    out <- tibble::tibble(`1. Stage F:` = f["value"])
+    return(out)
+  }
+}
 library(huxtable)
 tab = msummary(models = mod,
                        stars = TRUE,
                        statistic = 'std.error',
-                       gof_map = gm,gof_omit = gom,
+                       gof_omit = 'DF|Deviance|AIC|BIC|R2 Adj.|p.value|F$|se_type|statistic|Log.Lik.|Num.Obs.|N',
                output = "huxtable"
          )
 tab %>%
@@ -668,7 +679,7 @@ tab %>%
 .right-thin[
 1. OLS likely downward biased (measurement error in schooling)
 
-1. First Stage: IV `q4` is statistically significant, but small effect: born in q4 has 0.092 years of educ. $R^2$ is 0%!
+1. First Stage: IV `q4` is statistically significant, but small effect: born in q4 has 0.092 years of educ. $R^2$ is 0%! But F-stat is large. 😅
 
 1. Second stage has same point estimate as `2SLS` but different std error (2. stage one is wrong)
 
@@ -676,9 +687,29 @@ tab %>%
 
 ---
 
+# Remember the F-Statistic?
+
+* We encountered this before: it's useful to test restricted vs unrestricted models against each other.
+
+--
+
+* Here, we are interested whether our instruments are *jointly* significant. Of course, with only one IV, that's not more informative than the t-stat of that IV.
+
+--
+
+* This F-Stat compares the predictive power of the first stage with and without the IVs. If they have very similar predictive power, the F-stat will be low, and we will not be able to reject the H0 that our IVs are **jointly insignificant** in the first stage model. 😞
+
+---
+
 # Additional Control Variables
 
-We saw in figure \@ref(fig:ak91-age) that there is a clear time trend in years of schooling. There are also business-cycle fluctuations in earnings, even if we were not able to see them from the graph above. It is probably a good idea to control for calendar year in order to guard against any time effects in our results. Also, we can use more than one IV! Here is how:
+* We saw a clear time trend in education earlier.
+
+* There are also business-cycle fluctuations in earnings
+
+* We should somehow control for different time periods.
+
+* Also, we can use more than one IV! Here is how:
 
 ---
 
@@ -689,13 +720,15 @@ We saw in figure \@ref(fig:ak91-age) that there is a clear time trend in years o
 # we keep adding to our `mod` list:
 mod$ols_yr  <- update(mod$ols, . ~ . + yob_fct)  #  previous OLS model
 # add exogenous vars on both sides of the `|` !
-mod[["2SLS_yr"]] <- estimatr::iv_robust(lnw ~ s  + yob_fct | q4 + yob_fct, data = ak91 )  
+mod[["2SLS_yr"]] <- estimatr::iv_robust(lnw ~ s  + yob_fct | q4 + yob_fct, data = ak91, diagnostics = TRUE )  
 # use all quarters as IVs
-mod[["2SLS_all"]] <- estimatr::iv_robust(lnw ~ s  + yob_fct | qob_fct + yob_fct, data = ak91 )
+mod[["2SLS_all"]] <- estimatr::iv_robust(lnw ~ s  + yob_fct | qob_fct + yob_fct, data = ak91, diagnostics = TRUE  )
 ```
 
 
 ```{r,echo = FALSE}
+
+
 # here is how to make the table:
 rows <- data.frame(term = c("Instruments","Year of birth"),
                    ols  = c("none","no"),
@@ -707,7 +740,7 @@ rows <- data.frame(term = c("Instruments","Year of birth"),
 names(rows)[c(3,5,6)] <- c("2SLS","2SLS_yr","2SLS_all")
 tab = msummary(models = mod[c("ols","2SLS","ols_yr","2SLS_yr","2SLS_all")], 
                        statistic = 'std.error',
-                       gof_omit = 'DF|Deviance|AIC|BIC|R2 Adj.|F|p.value|se_type|statistic|Log.Lik.|Num.Obs.|N',
+                       gof_omit = 'DF|Deviance|AIC|BIC|R2 Adj.|p.value|F$|se_type|statistic|Log.Lik.|Num.Obs.|N',
                add_rows = rows,
                coef_omit = 'yob_fct',
                output = 'huxtable')
@@ -730,8 +763,44 @@ htab
 ```
 ]
 
+.right-thin[
+**Adding year controls**...
+
+* leaves OLS mostly unchanged
+* slight increase in 2SLS estimate
+
+**Using all quarters as IV**...
+
+* Increases precision of 2SLS estimate a lot!
+* Point estimate is 10.5% now!
+
+]
+
+
+---
+
+# AK91: Taking Stock - The Quarter of Birth (QOB) IV
+
+.pull-left[
+
+* This will produce consistent estimates if
+    1. The IV predicts the endogenous regressor well.
+    2. The IV is as good as random / independent of OVs.
+    3. Can only impact outcome through schooling.
+    
+* How does the QOB perform along those lines?
+
+]
+
+--
+
 .pull-right[
 
+1. Plot of first stage and high F-stat offer compelling evidence for **relevance**. ✅
+
+2. Is QOB **independent** of, say, *maternal characteristics*? Birthdays are not really random - there are birth seasons for certain socioeconomic backgrounds. highest maternal schooling give birth in second quarter. (not in 4th! ✅)
+
+3. Exclusion: What if the youngest kids (born in Q4!) are the disadvantaged ones early on, which has long-term negative impacts? That would mean $E[u|z] \neq 0$! Well, with QOB the youngest ones actually do better (more schooling and higher wage)! ✅
 ]
 
 ---
@@ -833,7 +902,7 @@ Cov(z,y) &= Cov(z, \beta_0 + \beta_1 x + u) \\
 \end{align}
 
 .pull-left[
-Under condition 2. above (*IV exogeneity*), we have $Cov(z,u)=0$, hence
+Under condition 2. above (**IV exogeneity**), we have $Cov(z,u)=0$, hence
 
 $$
 Cov(z,y) = \beta_1 Cov(z,x) 
@@ -843,7 +912,7 @@ $$
 --
 
 .pull-right[
-and under condition 1. (*relevance*), we have $Cov(z,x)\neq0$, so that we can divide the equation through to obtain
+and under condition 1. (**relevance**), we have $Cov(z,x)\neq0$, so that we can divide the equation through to obtain
 
 $$
 \beta_1 =  \frac{Cov(z,y)}{Cov(z,x)}.
@@ -1015,12 +1084,11 @@ We are worried that smoking behavior is correlated with a range of other health-
 data(bwght, package = "wooldridge")
 mods <- list()
 mods[["First Stage"]] <- lm(packs ~ cigprice, data = bwght)
-mods[["IV"]] <- estimatr::iv_robust(log(bwght) ~  packs | cigprice, data = bwght)
+mods[["IV"]] <- estimatr::iv_robust(log(bwght) ~  packs | cigprice, data = bwght, diagnostics = TRUE)
 ```
 
 ```{r,echo = FALSE}
-modelsummary(mods, gof_map = gm, 
-             gof_omit = gom, output = "huxtable") %>%
+modelsummary(mods, gof_omit = 'DF|Deviance|AIC|BIC|R2 Adj.|p.value|F$|se_type|statistic|Log.Lik.|Num.Obs.|N', output = "huxtable") %>%
   set_bottom_border(row = 7, col = everywhere) %>%
   set_bold(1, everywhere) %>%
   set_tb_padding(5)
@@ -1029,7 +1097,31 @@ modelsummary(mods, gof_map = gm,
 
 ---
 
-The first column of table \@ref(tab:bw) shows that the first stage is *very* weak. The partial effect of *cigprice* on *packs* smoked is zero! People don't seem to care a great deal about the price of cigarettes (at least in the range of price variation observed in this dataset). The $R^2$ of that first stage is thus zero. What do we get if we use that IV nonetheless in a 2SLS estimation as in column 2? We get a huge coefficient of unexpected sign on *packs* (smoking more increases birthweight? 🤔), with very large standard error, so statistically speaking, we cannot distinguish this from zero. What is more important, however, is that even if they *were* significant, the estimates of column 2 are **invalid**. The *relevance* of the IV condition is clearly not satisfied, hence, invalid approach.  
+# Weak Stuff
+
+.pull-left[
+
+* The first columns shows: very weak first stage. *cigprice* has zero impact on packs it seems!
+
+* $R^2$ is zero.
+
+* What is we use this IV nevertheless?
+]
+
+--
+
+.pull-right[
+
+* in the second column: very large, positive(!) impact of packs smoked on birthweight. 🤔
+
+* Huge Standard Error though.
+
+* An $R^2$ of -23?!
+
+* F-stat of first stage: 0.121. Corresponds to a p-value of `r round(mods[["IV"]]$diagnostic_first_stage_fstatistic["p.value"],3)` : we **cannot** reject the H0 of an insignificant first stage here *at all*.
+
+* So: **invalid** approach. ❌
+]
 
 
 

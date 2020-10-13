@@ -1,0 +1,1244 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>ScPoEconometrics: Advanced</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Florian Oswald" />
+    <link href="libs/remark-css/default.css" rel="stylesheet" />
+    <script src="libs/kePrint/kePrint.js"></script>
+    <link href="libs/lightable/lightable.css" rel="stylesheet" />
+    <script src="https://use.fontawesome.com/5235085b15.js"></script>
+    
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-41584331-6"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+    
+      gtag('config', 'UA-41584331-6');
+    </script>
+    <link rel="stylesheet" href="../../css/scpo.css" type="text/css" />
+    <link rel="stylesheet" href="../../css/scpo-fonts.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+# ScPoEconometrics: Advanced
+## Instrumental Variables - Applications
+### Florian Oswald
+### SciencesPo Paris </br> 2020-10-13
+
+---
+
+
+layout: true
+
+&lt;div class="my-footer"&gt;&lt;img src="../../img/logo/ScPo-shield.png" style="height: 60px;"/&gt;&lt;/div&gt; 
+
+---
+
+
+
+# Status
+
+.pull-left[
+
+## What Did we Do Last Week?
+
+* We learned about John Snow's grand experiment in London 1850.
+
+* We used his story to motivate the IV estimator.
+
+* You took a quiz about some IV aspects.
+
+]
+
+
+--
+
+.pull-right[
+
+## Today
+
+* We'll look at further IV applications.
+
+* We introduce an extension called *Two Stage Least Squares*.
+
+* We will use `R` to compute the estimates.
+
+* Finally we'll talk about *weak* instruments.
+
+]
+
+
+
+---
+
+layout: false
+class: separator, middle
+
+# Prologue
+
+## One cool `R` package a day, keeps the doctor away...
+
+---
+layout: false
+
+# [`Rayshader`](https://www.rayshader.com)
+
+* Can *raytrace* all kinds of elevation data.
+* Can *also* make most `ggplot`s come to 3D-life!
+
+&lt;video width="100%" height="50%" controls id="my_video"&gt;
+    &lt;source src="https://www.tylermw.com/wp-content/uploads/2019/05/deathappended2.mp4" type="video/mp4"&gt;
+&lt;/video&gt;
+
+---
+
+# [`Rayshader`](https://www.rayshader.com)
+
+* This is all it takes:
+
+
+```r
+library(ggplot2)
+library(rayshader)
+#Data from Social Security administration
+death = read_csv("https://www.tylermw.com/data/death.csv", skip = 1)
+meltdeath = reshape2::melt(death, id.vars = "Year")
+
+meltdeath$age = as.numeric(meltdeath$variable)
+
+# make a ggplot
+deathgg = ggplot(meltdeath) +
+  geom_raster(aes(x=Year,y=age,fill=value)) +
+  scale_x_continuous("Year",expand=c(0,0),breaks=seq(1900,2010,10)) +
+  scale_y_continuous("Age",expand=c(0,0),breaks=seq(0,100,10),limits=c(0,100)) +
+  scale_fill_viridis("Death\nProbability\nPer Year",
+       trans = "log10",breaks=c(1,0.1,0.01,0.001,0.0001), 
+       labels = c("1","1/10","1/100","1/1000","1/10000")) +
+  ggtitle("Death Probability vs Age and Year for the USA") +
+  labs(caption = "Data Source: US Dept. of Social Security")
+
+# give it to rayshader
+plot_gg(deathgg, multicore=TRUE,height=5,width=6,scale=500)
+```
+
+* Amazing, right? 🎉 🎊
+
+---
+
+layout: false
+class: separator, middle
+
+# Back to school!
+
+---
+layout: true
+
+&lt;div class="my-footer"&gt;&lt;img src="../../img/logo/ScPo-shield.png" style="height: 60px;"/&gt;&lt;/div&gt; 
+
+---
+
+# Returns To Schooling
+
+.pull-left[
+* What's the causal impact of schooling on earnings?
+
+* [Jacob Mincer](https://en.wikipedia.org/wiki/Jacob_Mincer) was interested in this important question.
+
+* Here's his model:
+
+$$
+\log Y_i = \alpha + \rho S_i + \beta_1 X_i + \beta_2 X_i^2 + e_i
+$$
+]
+
+
+.pull-right[
+&lt;img src="05-IV2_files/figure-html/mincer-1.svg" style="display: block; margin: auto;" /&gt;
+]
+
+---
+
+# Returns To Schooling
+
+.pull-left[
+$$
+\log Y_i = \alpha + \rho S_i + \beta_1 X_i + \beta_2 X_i^2 + e_i
+$$
+
+* He found an estimate for `\(\rho\)` of about 0.11, 
+
+* 11% earnings advantage for each additional year of education
+
+* Look at the DAG. Is that a good model? Well, why would it not be? 
+]
+
+
+.pull-right[
+&lt;img src="05-IV2_files/figure-html/mincer2-1.svg" style="display: block; margin: auto;" /&gt;
+]
+
+---
+
+# Ability Bias
+
+.pull-left[
+* We compare earnings of men with certain schooling and work experience
+
+* Is all else equal, after controlling for those?
+
+* Given `\(X\)`, 
+    * Can we find differently diligent workers out there? 
+    * Can we find differently able workers?
+    * Do family connections of workers vary?
+]
+
+--
+
+.pull-right[
+* Yes, of course. So, *all else* is not equal at all.
+
+* That's an issue, because for OLS consistency we require the orthogonality assumption 
+`$$E[e_i | S_i, X_i] \neq 0$$`
+
+* Let's introduce **ability** `\(A_i\)` explicitly.
+]
+
+
+---
+
+# Mincer with Unobserved Ability
+
+.pull-left[
+* In fact we have *two* unobservables: `\(e\)` and `\(A\)`.
+
+* Of course we can't tell them apart.
+
+* So we defined a new unobservable factor 
+`$$u_i = e_i + A_i$$`
+
+]
+
+--
+
+.pull-right[
+
+&lt;img src="05-IV2_files/figure-html/mincer3-1.svg" style="display: block; margin: auto;" /&gt;
+]
+
+---
+
+# Mincer with Unobserved Ability
+
+.pull-left[
+* In terms of an equation:
+`$$\log Y_i = \alpha + \rho S_i + \beta_1 X_i + \beta_2 X_i^2 + \underbrace{u_i}_{A_i + e_i}$$`
+
+* Sometimes, this does not matter, and the OLS bias is small.
+
+* But sometimes it does and we get it totally wrong! Example.
+
+]
+
+
+.pull-right[
+
+&lt;img src="05-IV2_files/figure-html/mincer4-1.svg" style="display: block; margin: auto;" /&gt;
+]
+
+---
+
+# Angrist and Krueger (1991): Birthdate is as good as Random
+
+
+.pull-left[
+* Angrist and Krueger (AK91) is an influental study addressing ability bias.
+
+* Idea: 
+    1. construct an IV that encodes *birth date of student*.
+    1. Child born just after cutoff date will start school later!
+    
+* Suppose all children who reach the age of 6 by 31st of december 2021 are required to enroll in the first grade of school in september 2021.
+]
+
+--
+
+.pull-right[
+* If born in September 2015 (i.e. 6 years prior), will be 5 years and 3/4 by the time they start school.
+
+* If born on the 1st of January 2016 will be 6 and 3/4 years when *they* enter school in september 2022.
+
+* However, people can drop out of school legally on their 16-th birthday! 
+
+* So, out of people who drop out, some got more schooling than others.
+
+* AK91 construct IV *quarter of birth* dummy: affects schooling, but not related to `\(A\)`!
+]
+
+---
+
+# AK91 IV setup
+
+.pull-left[
+* *quarter of birth* dummy `\(z\)`: affects schooling, but not related to `\(A\)`!
+
+* In particular: whether born in 4-th quarter or not.
+
+]
+
+.pull-right[
+
+&lt;img src="05-IV2_files/figure-html/ak-mod-1.svg" style="display: block; margin: auto;" /&gt;
+]
+
+---
+
+# AK91 Estimation: Two Stage Least Squares (2SLS)
+
+AK91 allow us to introduce a widely used variation of our simple IV estimator: **2SLS**
+
+1. We estimate a **first stage model** which uses only exogenous variables (like `\(z\)`) to explain our endgenous regressor `\(s\)`.
+
+2. We then use the first stage model to *predict* values of `\(s\)` in what is called the **second stage** or the **reduced form** model. Performing this procedure is supposed to take out any impact of `\(A\)` in the correlation we observe in our data between `\(s\)` and `\(y\)`.
+
+`\begin{align}
+\text{1. Stage: }s_i &amp;= \alpha_0 + \alpha_1 z_i + \eta_i \\ 
+\text{2. Stage: }y_i &amp;= \beta_0 + \beta_1 \hat{s}_i + u_i 
+\end{align}`
+
+**Conditions:**
+
+1. Relevance of the IV: `\(\alpha_1 \neq 0\)`
+1. Independence (IV assignment as good as random): `\(E[\eta | z] = 0\)`
+1. Exogeneity (our exclusion restriction): `\(E[u | z] = 0\)`
+
+
+---
+layout: false
+class: separator, middle
+
+# Let's do Angrist and Krueger (1991)! 
+
+---
+layout: true
+
+&lt;div class="my-footer"&gt;&lt;img src="../../img/logo/ScPo-shield.png" style="height: 60px;"/&gt;&lt;/div&gt; 
+
+---
+
+# Data on birth quarter and wages
+
+Let's load the data and look at a quick summary
+
+
+```r
+data("ak91", package = "masteringmetrics")
+# from the modelsummary package
+datasummary_skim(data.frame(ak91),histogram = TRUE)
+```
+
+&lt;table class="table" style="width: auto !important; margin-left: auto; margin-right: auto;"&gt;
+ &lt;thead&gt;
+  &lt;tr&gt;
+   &lt;th style="text-align:left;"&gt;   &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; Unique (#) &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; Missing (%) &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; Mean &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; SD &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; Min &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; Median &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; Max &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt;    &lt;/th&gt;
+  &lt;/tr&gt;
+ &lt;/thead&gt;
+&lt;tbody&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; lnw &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 26732 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 5.9 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.7 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -2.3 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 6.0 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 10.5 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt;  &lt;svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="48pt" height="12pt" viewBox="0 0 48 12" version="1.1"&gt;&lt;g id="surface59"&gt;&lt;path style="fill:none;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M -0.234375 11.664062 L 2.109375 11.664062 Z M -0.234375 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill:none;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 2.109375 11.664062 L 4.453125 11.664062 Z M 2.109375 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 4.453125 11.664062 L 6.796875 11.664062 L 6.796875 11.660156 L 4.453125 11.660156 Z M 4.453125 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 6.796875 11.664062 L 9.140625 11.664062 L 9.140625 11.660156 L 6.796875 11.660156 Z M 6.796875 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 9.140625 11.664062 L 11.484375 11.664062 L 11.484375 11.660156 L 9.140625 11.660156 Z M 9.140625 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 11.484375 11.664062 L 13.828125 11.664062 L 13.828125 11.65625 L 11.484375 11.65625 Z M 11.484375 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 13.828125 11.664062 L 16.171875 11.664062 L 16.171875 11.644531 L 13.828125 11.644531 Z M 13.828125 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 16.167969 11.664062 L 18.511719 11.664062 L 18.511719 11.644531 L 16.167969 11.644531 Z M 16.167969 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 18.511719 11.664062 L 20.855469 11.664062 L 20.855469 11.605469 L 18.511719 11.605469 Z M 18.511719 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 20.855469 11.664062 L 23.199219 11.664062 L 23.199219 11.488281 L 20.855469 11.488281 Z M 20.855469 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 23.199219 11.664062 L 25.542969 11.664062 L 25.542969 11.421875 L 23.199219 11.421875 Z M 23.199219 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 25.542969 11.664062 L 27.886719 11.664062 L 27.886719 10.464844 L 25.542969 10.464844 Z M 25.542969 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 27.886719 11.664062 L 30.230469 11.664062 L 30.230469 5.898438 L 27.886719 5.898438 Z M 27.886719 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 30.230469 11.664062 L 32.574219 11.664062 L 32.574219 3.21875 L 30.230469 3.21875 Z M 30.230469 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 32.574219 11.664062 L 34.917969 11.664062 L 34.917969 10.277344 L 32.574219 10.277344 Z M 32.574219 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 34.917969 11.664062 L 37.261719 11.664062 L 37.261719 11.398438 L 34.917969 11.398438 Z M 34.917969 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 37.261719 11.664062 L 39.605469 11.664062 L 39.605469 11.652344 L 37.261719 11.652344 Z M 37.261719 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 39.605469 11.664062 L 41.949219 11.664062 L 41.949219 11.660156 L 39.605469 11.660156 Z M 39.605469 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill:none;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 41.949219 11.664062 L 44.292969 11.664062 Z M 41.949219 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill:none;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 44.292969 11.664062 L 46.636719 11.664062 Z M 44.292969 11.664062 "&gt;&lt;/path&gt;&lt;/g&gt;&lt;/svg&gt;
+&lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; s &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 21 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 12.8 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 3.3 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 12.0 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 20.0 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt;  &lt;svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="48pt" height="12pt" viewBox="0 0 48 12" version="1.1"&gt;&lt;g id="surface64"&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 20.855469 11.664062 L 22.027344 11.664062 L 22.027344 11.609375 L 20.855469 11.609375 Z M 20.855469 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 22.027344 11.664062 L 23.199219 11.664062 L 23.199219 11.621094 L 22.027344 11.621094 Z M 22.027344 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 23.199219 11.664062 L 24.371094 11.664062 L 24.371094 11.496094 L 23.199219 11.496094 Z M 23.199219 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 24.371094 11.664062 L 25.542969 11.664062 L 25.542969 11.261719 L 24.371094 11.261719 Z M 24.371094 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 25.542969 11.664062 L 26.714844 11.664062 L 26.714844 11.238281 L 25.542969 11.238281 Z M 25.542969 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 26.714844 11.664062 L 27.886719 11.664062 L 27.886719 9.652344 L 26.714844 9.652344 Z M 26.714844 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 27.886719 11.664062 L 29.058594 11.664062 L 29.058594 9.589844 L 27.886719 9.589844 Z M 27.886719 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 29.058594 11.664062 L 30.230469 11.664062 L 30.230469 3.21875 L 29.058594 3.21875 Z M 29.058594 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 30.230469 11.664062 L 31.402344 11.664062 L 31.402344 8.644531 L 30.230469 8.644531 Z M 30.230469 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 31.402344 11.664062 L 32.574219 11.664062 L 32.574219 8.523438 L 31.402344 8.523438 Z M 31.402344 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 32.574219 11.664062 L 33.746094 11.664062 L 33.746094 10.835938 L 32.574219 10.835938 Z M 32.574219 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 33.746094 11.664062 L 34.917969 11.664062 L 34.917969 10.429688 L 33.746094 10.429688 Z M 33.746094 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 34.917969 11.664062 L 36.089844 11.664062 L 36.089844 10.875 L 34.917969 10.875 Z M 34.917969 11.664062 "&gt;&lt;/path&gt;&lt;/g&gt;&lt;/svg&gt;
+&lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; yob &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 10 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1934.6 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 2.9 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1930.0 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1935.0 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1939.0 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt;  &lt;svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="48pt" height="12pt" viewBox="0 0 48 12" version="1.1"&gt;&lt;g id="surface69"&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 26.480469 11.664062 L 26.949219 11.664062 L 26.949219 3.738281 L 26.480469 3.738281 Z M 26.480469 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 26.949219 11.664062 L 27.417969 11.664062 L 27.417969 4.453125 L 26.949219 4.453125 Z M 26.949219 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill:none;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 27.417969 11.664062 L 27.886719 11.664062 Z M 27.417969 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 27.886719 11.664062 L 28.355469 11.664062 L 28.355469 4.066406 L 27.886719 4.066406 Z M 27.886719 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill:none;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 28.355469 11.664062 L 28.824219 11.664062 Z M 28.355469 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 28.824219 11.664062 L 29.292969 11.664062 L 29.292969 4.410156 L 28.824219 4.410156 Z M 28.824219 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 29.292969 11.664062 L 29.761719 11.664062 L 29.761719 4.136719 L 29.292969 4.136719 Z M 29.292969 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill:none;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 29.761719 11.664062 L 30.230469 11.664062 Z M 29.761719 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 30.230469 11.664062 L 30.699219 11.664062 L 30.699219 3.933594 L 30.230469 3.933594 Z M 30.230469 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill:none;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 30.699219 11.664062 L 31.167969 11.664062 Z M 30.699219 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 31.167969 11.664062 L 31.636719 11.664062 L 31.636719 3.957031 L 31.167969 3.957031 Z M 31.167969 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill:none;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 31.636719 11.664062 L 32.105469 11.664062 Z M 31.636719 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 32.105469 11.664062 L 32.574219 11.664062 L 32.574219 3.652344 L 32.105469 3.652344 Z M 32.105469 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 32.574219 11.664062 L 33.042969 11.664062 L 33.042969 3.355469 L 32.574219 3.355469 Z M 32.574219 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill:none;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 33.042969 11.664062 L 33.511719 11.664062 Z M 33.042969 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 33.511719 11.664062 L 33.980469 11.664062 L 33.980469 3.21875 L 33.511719 3.21875 Z M 33.511719 11.664062 "&gt;&lt;/path&gt;&lt;/g&gt;&lt;/svg&gt;
+&lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; qob &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 4 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 2.5 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.1 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.0 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 3.0 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 4.0 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt;  &lt;svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="48pt" height="12pt" viewBox="0 0 48 12" version="1.1"&gt;&lt;g id="surface74"&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 26.949219 11.664062 L 27.183594 11.664062 L 27.183594 3.722656 L 26.949219 3.722656 Z M 26.949219 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill:none;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 27.183594 11.664062 L 27.417969 11.664062 Z M 27.183594 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill:none;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 27.417969 11.664062 L 27.652344 11.664062 Z M 27.417969 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill:none;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 27.652344 11.664062 L 27.886719 11.664062 Z M 27.652344 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill:none;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 27.886719 11.664062 L 28.121094 11.664062 Z M 27.886719 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill:none;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 28.121094 11.664062 L 28.355469 11.664062 Z M 28.121094 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill:none;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 28.355469 11.664062 L 28.589844 11.664062 Z M 28.355469 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill:none;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 28.589844 11.664062 L 28.824219 11.664062 Z M 28.589844 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill:none;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 28.824219 11.664062 L 29.058594 11.664062 Z M 28.824219 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 29.058594 11.664062 L 29.292969 11.664062 L 29.292969 3.871094 L 29.058594 3.871094 Z M 29.058594 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill:none;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 29.292969 11.664062 L 29.527344 11.664062 Z M 29.292969 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill:none;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 29.527344 11.664062 L 29.761719 11.664062 Z M 29.527344 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill:none;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 29.761719 11.664062 L 29.996094 11.664062 Z M 29.761719 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill:none;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 29.996094 11.664062 L 30.230469 11.664062 Z M 29.996094 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill:none;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 30.230469 11.664062 L 30.464844 11.664062 Z M 30.230469 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill:none;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 30.464844 11.664062 L 30.699219 11.664062 Z M 30.464844 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill:none;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 30.699219 11.664062 L 30.933594 11.664062 Z M 30.699219 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill:none;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 30.933594 11.664062 L 31.167969 11.664062 Z M 30.933594 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 31.167969 11.664062 L 31.402344 11.664062 L 31.402344 3.21875 L 31.167969 3.21875 Z M 31.167969 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill:none;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 31.402344 11.664062 L 31.636719 11.664062 Z M 31.402344 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill:none;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 31.636719 11.664062 L 31.871094 11.664062 Z M 31.636719 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill:none;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 31.871094 11.664062 L 32.105469 11.664062 Z M 31.871094 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill:none;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 32.105469 11.664062 L 32.339844 11.664062 Z M 32.105469 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill:none;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 32.339844 11.664062 L 32.574219 11.664062 Z M 32.339844 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill:none;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 32.574219 11.664062 L 32.808594 11.664062 Z M 32.574219 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill:none;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 32.808594 11.664062 L 33.042969 11.664062 Z M 32.808594 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill:none;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 33.042969 11.664062 L 33.277344 11.664062 Z M 33.042969 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 33.277344 11.664062 L 33.511719 11.664062 L 33.511719 3.804688 L 33.277344 3.804688 Z M 33.277344 11.664062 "&gt;&lt;/path&gt;&lt;/g&gt;&lt;/svg&gt;
+&lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; sob &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 51 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 30.7 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 14.2 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.0 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 34.0 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 56.0 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt;  &lt;svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="48pt" height="12pt" viewBox="0 0 48 12" version="1.1"&gt;&lt;g id="surface79"&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 25.074219 11.664062 L 25.542969 11.664062 L 25.542969 9.8125 L 25.074219 9.8125 Z M 25.074219 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 25.542969 11.664062 L 26.011719 11.664062 L 26.011719 10.191406 L 25.542969 10.191406 Z M 25.542969 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 26.011719 11.664062 L 26.480469 11.664062 L 26.480469 9.285156 L 26.011719 9.285156 Z M 26.011719 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 26.480469 11.664062 L 26.949219 11.664062 L 26.949219 10.105469 L 26.480469 10.105469 Z M 26.480469 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 26.949219 11.664062 L 27.417969 11.664062 L 27.417969 8.75 L 26.949219 8.75 Z M 26.949219 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 27.417969 11.664062 L 27.886719 11.664062 L 27.886719 11.269531 L 27.417969 11.269531 Z M 27.417969 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 27.886719 11.664062 L 28.355469 11.664062 L 28.355469 4.359375 L 27.886719 4.359375 Z M 27.886719 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 28.355469 11.664062 L 28.824219 11.664062 L 28.824219 7.429688 L 28.355469 7.429688 Z M 28.355469 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 28.824219 11.664062 L 29.292969 11.664062 L 29.292969 8.113281 L 28.824219 8.113281 Z M 28.824219 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 29.292969 11.664062 L 29.761719 11.664062 L 29.761719 7.097656 L 29.292969 7.097656 Z M 29.292969 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 29.761719 11.664062 L 30.230469 11.664062 L 30.230469 8.109375 L 29.761719 8.109375 Z M 29.761719 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 30.230469 11.664062 L 30.699219 11.664062 L 30.699219 10.589844 L 30.230469 10.589844 Z M 30.230469 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 30.699219 11.664062 L 31.167969 11.664062 L 31.167969 3.21875 L 30.699219 3.21875 Z M 30.699219 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 31.167969 11.664062 L 31.636719 11.664062 L 31.636719 5.242188 L 31.167969 5.242188 Z M 31.167969 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 31.636719 11.664062 L 32.105469 11.664062 L 32.105469 4.046875 L 31.636719 4.046875 Z M 31.636719 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 32.105469 11.664062 L 32.574219 11.664062 L 32.574219 11.300781 L 32.105469 11.300781 Z M 32.105469 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 32.574219 11.664062 L 33.042969 11.664062 L 33.042969 8.371094 L 32.574219 8.371094 Z M 32.574219 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 33.042969 11.664062 L 33.511719 11.664062 L 33.511719 7.597656 L 33.042969 7.597656 Z M 33.042969 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 33.511719 11.664062 L 33.980469 11.664062 L 33.980469 9.316406 L 33.511719 9.316406 Z M 33.511719 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 33.980469 11.664062 L 34.449219 11.664062 L 34.449219 8.285156 L 33.980469 8.285156 Z M 33.980469 11.664062 "&gt;&lt;/path&gt;&lt;/g&gt;&lt;/svg&gt;
+&lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; age &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 40 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 45.0 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 2.9 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 40.2 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 45.0 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 50.0 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt;  &lt;svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="48pt" height="12pt" viewBox="0 0 48 12" version="1.1"&gt;&lt;g id="surface84"&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 26.011719 11.664062 L 26.480469 11.664062 L 26.480469 8.871094 L 26.011719 8.871094 Z M 26.011719 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 26.480469 11.664062 L 26.949219 11.664062 L 26.949219 5.894531 L 26.480469 5.894531 Z M 26.480469 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 26.949219 11.664062 L 27.417969 11.664062 L 27.417969 3.21875 L 26.949219 3.21875 Z M 26.949219 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 27.417969 11.664062 L 27.886719 11.664062 L 27.886719 6.234375 L 27.417969 6.234375 Z M 27.417969 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 27.886719 11.664062 L 28.355469 11.664062 L 28.355469 6.105469 L 27.886719 6.105469 Z M 27.886719 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 28.355469 11.664062 L 28.824219 11.664062 L 28.824219 3.980469 L 28.355469 3.980469 Z M 28.355469 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 28.824219 11.664062 L 29.292969 11.664062 L 29.292969 6.445312 L 28.824219 6.445312 Z M 28.824219 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 29.292969 11.664062 L 29.761719 11.664062 L 29.761719 6.554688 L 29.292969 6.554688 Z M 29.292969 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 29.761719 11.664062 L 30.230469 11.664062 L 30.230469 3.832031 L 29.761719 3.832031 Z M 29.761719 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 30.230469 11.664062 L 30.699219 11.664062 L 30.699219 6.4375 L 30.230469 6.4375 Z M 30.230469 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 30.699219 11.664062 L 31.167969 11.664062 L 31.167969 6.808594 L 30.699219 6.808594 Z M 30.699219 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 31.167969 11.664062 L 31.636719 11.664062 L 31.636719 4.421875 L 31.167969 4.421875 Z M 31.167969 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 31.636719 11.664062 L 32.105469 11.664062 L 32.105469 6.699219 L 31.636719 6.699219 Z M 31.636719 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 32.105469 11.664062 L 32.574219 11.664062 L 32.574219 6.589844 L 32.105469 6.589844 Z M 32.105469 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 32.574219 11.664062 L 33.042969 11.664062 L 33.042969 4.222656 L 32.574219 4.222656 Z M 32.574219 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 33.042969 11.664062 L 33.511719 11.664062 L 33.511719 6.839844 L 33.042969 6.839844 Z M 33.042969 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 33.511719 11.664062 L 33.980469 11.664062 L 33.980469 6.355469 L 33.511719 6.355469 Z M 33.511719 11.664062 "&gt;&lt;/path&gt;&lt;path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.375;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 33.980469 11.664062 L 34.449219 11.664062 L 34.449219 6.359375 L 33.980469 6.359375 Z M 33.980469 11.664062 "&gt;&lt;/path&gt;&lt;/g&gt;&lt;/svg&gt;
+&lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+---
+
+# AK91 Data Transformations
+
+* We want to create the `q4` dummy which is `TRUE` if you are born in the 4th quarter.
+
+* create `factor` versions of quarter and year of birth.
+
+
+```r
+ak91 &lt;- mutate(ak91,
+               qob_fct = factor(qob),
+               q4 = as.integer(qob == "4"),
+               yob_fct = factor(yob))
+# get mean wage by year/quarter
+ak91_age &lt;- ak91 %&gt;%
+  group_by(qob, yob) %&gt;%
+  summarise(lnw = mean(lnw), s = mean(s)) %&gt;%
+  mutate(q4 = (qob == 4))
+```
+
+---
+
+# AK91 Figure 1: First Stage!
+
+Let's reproduce AK91's first figure now on education as a function of quarter of birth!
+
+
+```r
+ggplot(ak91_age, aes(x = yob + (qob - 1) / 4, y = s )) +
+  geom_line() + 
+  geom_label(mapping = aes(label = qob, color = q4)) +
+  guides(label = FALSE, color = FALSE) +
+  scale_x_continuous("Year of birth", breaks = 1930:1940) +
+  scale_y_continuous("Years of Education", breaks = seq(12.2, 13.2, by = 0.2),
+                     limits = c(12.2, 13.2)) +
+  theme_bw()
+```
+
+---
+
+# AK91 Figure 1: First Stage!
+
+.left-thin[
+&lt;br&gt;
+&lt;br&gt;
+1. The numbers label mean education *by* quarter of birth groups.
+
+1. The 4-th quarters **did** get more education in most years!
+
+1. There is a general trend.
+
+]
+
+.right-wide[
+&lt;img src="05-IV2_files/figure-html/ak91-dummy-1.svg" style="display: block; margin: auto;" /&gt;
+]
+
+---
+
+# AK91 Figure 2: Impact of IV on outcome
+
+What about earnings for those groups?
+
+
+
+```r
+ggplot(ak91_age, aes(x = yob + (qob - 1) / 4, y = lnw)) +
+  geom_line() +
+  geom_label(mapping = aes(label = qob, color = q4)) +
+  scale_x_continuous("Year of birth", breaks = 1930:1940) +
+  scale_y_continuous("Log weekly wages") +
+  guides(label = FALSE, color = FALSE) +  
+  theme_bw()
+```
+
+---
+
+# AK91 Figure 2: Impact of IV on outcome
+
+
+.left-thin[
+&lt;br&gt;
+&lt;br&gt;
+&lt;br&gt;
+1. The 4-th quarters are among the high-earners by birth year.
+
+1. In general, weekly wages seem to decline somewhat over time.
+
+]
+
+.right-wide[
+
+&lt;img src="05-IV2_files/figure-html/ak91-wage-1.svg" style="display: block; margin: auto;" /&gt;
+]
+
+---
+
+# Running IV estimation in `R`
+
+&lt;br&gt;
+&lt;br&gt;
+
+.pull-left[
+* Several options (like always with `R`! 😉)
+
+* Will use the [`iv_robust`](https://declaredesign.org/r/estimatr/reference/iv_robust.html) function from the `estimatr` package.
+
+* *Robust*? Computes standard errors which are correcting for heteroskedasticity. [Details here.](https://declaredesign.org/r/estimatr/articles/mathematical-notes.html)
+]
+
+
+.pull-right[
+
+```r
+library(estimatr)
+# create a list of models
+mod &lt;- list()
+
+# standard (biased!) OLS
+mod$ols &lt;- lm(lnw ~ s, data = ak91)
+
+# IV: born in q4 is TRUE?
+# doing IV manually in 2 stages.
+mod[["1. stage"]] &lt;- lm(s ~ q4, data = ak91)
+ak91$shat         &lt;- predict(mod[["1. stage"]])  
+mod[["2. stage"]] &lt;- lm(lnw ~ shat, data = ak91)
+
+# run 2SLS
+# doing IV all in one go
+# notice the formula!
+# formula = y ~ x | z
+mod$`2SLS`  &lt;- iv_robust(lnw ~ s | q4,
+                                   data = ak91,
+                         diagnostics = TRUE)
+```
+]
+
+---
+count: false
+
+# Running IV estimation in `R`
+
+&lt;br&gt;
+&lt;br&gt;
+
+.pull-left[
+* Several options (like always with `R`! 😉)
+
+* Will use the [`iv_robust`](https://declaredesign.org/r/estimatr/reference/iv_robust.html) function from the `estimatr` package.
+
+* *Robust*? Computes standard errors which are correcting for heteroskedasticity. [Details here.](https://declaredesign.org/r/estimatr/articles/mathematical-notes.html)
+
+* Notice the `predict` to get `\(\hat{s}\)`.
+]
+
+
+.pull-right[
+
+```r
+library(estimatr)
+# create a list of models
+mod &lt;- list()
+
+# standard (biased!) OLS
+mod$ols &lt;- lm(lnw ~ s, data = ak91)
+
+# IV: born in q4 is TRUE?
+# doing IV manually in 2 stages.
+mod[["1. stage"]] &lt;- lm(s ~ q4, data = ak91)
+*ak91$shat         &lt;- predict(mod[["1. stage"]])
+mod[["2. stage"]] &lt;- lm(lnw ~ shat, data = ak91)
+
+# run 2SLS
+# doing IV all in one go
+# notice the formula!
+# formula = y ~ x | z
+mod$`2SLS`  &lt;- iv_robust(lnw ~ s | q4,
+                         data = ak91,
+                         diagnostics = TRUE)
+```
+]
+
+---
+
+# AK91 Results Table
+
+.left-wide[
+<table class="huxtable" style="border-collapse: collapse; border: 0px; margin-bottom: 2em; margin-top: 2em; ; margin-left: auto; margin-right: auto;  " id="tab:ms1">
+<col><col><col><col><col><tr>
+<th style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 1pt 0pt;    padding: 3.5pt 6pt 3.5pt 6pt; font-weight: normal;"> </th><th style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 1pt 0pt;    padding: 3.5pt 6pt 3.5pt 6pt; font-weight: normal;">ols</th><th style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 1pt 0pt;    padding: 3.5pt 6pt 3.5pt 6pt; font-weight: normal;">1. stage</th><th style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 1pt 0pt;    padding: 3.5pt 6pt 3.5pt 6pt; font-weight: normal;">2. stage</th><th style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 1pt 0pt;    padding: 3.5pt 6pt 3.5pt 6pt; font-weight: normal;">2SLS</th></tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 0pt 0pt;    padding: 3.5pt 6pt 3.5pt 6pt; font-weight: normal;">(Intercept)</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 0pt 0pt;    padding: 3.5pt 6pt 3.5pt 6pt; font-weight: normal;">4.995***</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 0pt 0pt;    padding: 3.5pt 6pt 3.5pt 6pt; font-weight: normal;">12.747***</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 0pt 0pt;    padding: 3.5pt 6pt 3.5pt 6pt; font-weight: normal;">4.955***</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 0pt 0pt;    padding: 3.5pt 6pt 3.5pt 6pt; font-weight: normal;">4.955***</td></tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 3.5pt 6pt 3.5pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 3.5pt 6pt 3.5pt 6pt; font-weight: normal;">(0.004)</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 3.5pt 6pt 3.5pt 6pt; font-weight: normal;">(0.007)</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 3.5pt 6pt 3.5pt 6pt; font-weight: normal;">(0.381)</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 3.5pt 6pt 3.5pt 6pt; font-weight: normal;">(0.358)</td></tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 3.5pt 6pt 3.5pt 6pt; font-weight: normal;">s</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 3.5pt 6pt 3.5pt 6pt; font-weight: normal;">0.071***</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 3.5pt 6pt 3.5pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 3.5pt 6pt 3.5pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 3.5pt 6pt 3.5pt 6pt; font-weight: normal;">0.074***</td></tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 3.5pt 6pt 3.5pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 3.5pt 6pt 3.5pt 6pt; font-weight: normal;">(0.000)</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 3.5pt 6pt 3.5pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 3.5pt 6pt 3.5pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 3.5pt 6pt 3.5pt 6pt; font-weight: normal;">(0.028)</td></tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 3.5pt 6pt 3.5pt 6pt; font-weight: normal;">q4</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 3.5pt 6pt 3.5pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 3.5pt 6pt 3.5pt 6pt; font-weight: normal;">0.092***</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 3.5pt 6pt 3.5pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 3.5pt 6pt 3.5pt 6pt; font-weight: normal;"></td></tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 3.5pt 6pt 3.5pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 3.5pt 6pt 3.5pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 3.5pt 6pt 3.5pt 6pt; font-weight: normal;">(0.013)</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 3.5pt 6pt 3.5pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 3.5pt 6pt 3.5pt 6pt; font-weight: normal;"></td></tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 3.5pt 6pt 3.5pt 6pt; font-weight: normal;">shat</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 3.5pt 6pt 3.5pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 3.5pt 6pt 3.5pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 3.5pt 6pt 3.5pt 6pt; font-weight: normal;">0.074**</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 3.5pt 6pt 3.5pt 6pt; font-weight: normal;"></td></tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 0.4pt 0pt;    padding: 3.5pt 6pt 3.5pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 0.4pt 0pt;    padding: 3.5pt 6pt 3.5pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 0.4pt 0pt;    padding: 3.5pt 6pt 3.5pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 0.4pt 0pt;    padding: 3.5pt 6pt 3.5pt 6pt; font-weight: normal;">(0.030)</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 0.4pt 0pt;    padding: 3.5pt 6pt 3.5pt 6pt; font-weight: normal;"></td></tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0.4pt 0pt 0pt 0pt;    padding: 3.5pt 6pt 3.5pt 6pt; font-weight: normal;">R2</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0.4pt 0pt 0pt 0pt;    padding: 3.5pt 6pt 3.5pt 6pt; font-weight: normal;">0.117</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0.4pt 0pt 0pt 0pt;    padding: 3.5pt 6pt 3.5pt 6pt; font-weight: normal;">0.000</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0.4pt 0pt 0pt 0pt;    padding: 3.5pt 6pt 3.5pt 6pt; font-weight: normal;">0.000</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0.4pt 0pt 0pt 0pt;    padding: 3.5pt 6pt 3.5pt 6pt; font-weight: normal;">0.117</td></tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 0.8pt 0pt;    padding: 3.5pt 6pt 3.5pt 6pt; font-weight: normal;">1. Stage F:</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 0.8pt 0pt;    padding: 3.5pt 6pt 3.5pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 0.8pt 0pt;    padding: 3.5pt 6pt 3.5pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 0.8pt 0pt;    padding: 3.5pt 6pt 3.5pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 0.8pt 0pt;    padding: 3.5pt 6pt 3.5pt 6pt; font-weight: normal;">48.990</td></tr>
+<tr>
+<td colspan="5" style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0.8pt 0pt 0pt 0pt;    padding: 3.5pt 6pt 3.5pt 6pt; font-weight: normal;">* p &lt; 0.1, ** p &lt; 0.05, *** p &lt; 0.01</td></tr>
+</table>
+
+]
+
+.right-thin[
+1. OLS likely downward biased (measurement error in schooling)
+
+1. First Stage: IV `q4` is statistically significant, but small effect: born in q4 has 0.092 years of educ. `\(R^2\)` is 0%! But F-stat is large. 😅
+
+1. Second stage has same point estimate as `2SLS` but different std error (2. stage one is wrong)
+
+]
+
+---
+
+# Remember the F-Statistic?
+
+* We encountered this before: it's useful to test restricted vs unrestricted models against each other.
+
+--
+
+* Here, we are interested whether our instruments are *jointly* significant. Of course, with only one IV, that's not more informative than the t-stat of that IV.
+
+--
+
+* This F-Stat compares the predictive power of the first stage with and without the IVs. If they have very similar predictive power, the F-stat will be low, and we will not be able to reject the H0 that our IVs are **jointly insignificant** in the first stage model. 😞
+
+---
+
+# Additional Control Variables
+
+* We saw a clear time trend in education earlier.
+
+* There are also business-cycle fluctuations in earnings
+
+* We should somehow control for different time periods.
+
+* Also, we can use more than one IV! Here is how:
+
+---
+
+# Additional Control Variables
+
+
+
+```r
+# we keep adding to our `mod` list:
+mod$ols_yr  &lt;- update(mod$ols, . ~ . + yob_fct)  #  previous OLS model
+# add exogenous vars on both sides of the `|` !
+mod[["2SLS_yr"]] &lt;- estimatr::iv_robust(lnw ~ s  + yob_fct | q4 + yob_fct, data = ak91, diagnostics = TRUE )  
+# use all quarters as IVs
+mod[["2SLS_all"]] &lt;- estimatr::iv_robust(lnw ~ s  + yob_fct | qob_fct + yob_fct, data = ak91, diagnostics = TRUE  )
+```
+
+
+<table class="huxtable" style="border-collapse: collapse; border: 0px; margin-bottom: 2em; margin-top: 2em; ; margin-left: auto; margin-right: auto;  " id="tab:unnamed-chunk-8">
+<col><col><col><col><col><col><tr>
+<th style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 1pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: bold;"> </th><th style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 1pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: bold;">ols</th><th style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 1pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: bold;">2SLS</th><th style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 1pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: bold;">ols_yr</th><th style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 1pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: bold;">2SLS_yr</th><th style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 1pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: bold;">2SLS_all</th></tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 0pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: normal;">(Intercept)</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 0pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: normal;">4.995</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 0pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: normal;">4.955</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 0pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: normal;">5.017</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 0pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: normal;">4.966</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 0pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: normal;">4.592</td></tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 6pt 4pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 6pt 4pt 6pt; font-weight: normal;">(0.004)</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 6pt 4pt 6pt; font-weight: normal;">(0.358)</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 6pt 4pt 6pt; font-weight: normal;">(0.005)</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 6pt 4pt 6pt; font-weight: normal;">(0.354)</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 6pt 4pt 6pt; font-weight: normal;">(0.251)</td></tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 6pt 4pt 6pt; font-weight: normal;">s</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 6pt 4pt 6pt; font-weight: normal;">0.071</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 6pt 4pt 6pt; font-weight: normal;">0.074</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 6pt 4pt 6pt; font-weight: normal;">0.071</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 6pt 4pt 6pt; font-weight: normal;">0.075</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 6pt 4pt 6pt; font-weight: normal;">0.105</td></tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 1pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 1pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: normal;">(0.000)</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 1pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: normal;">(0.028)</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 1pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: normal;">(0.000)</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 1pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: normal;">(0.028)</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 1pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: normal;">(0.020)</td></tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 0.4pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: normal;">R2</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 0.4pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: normal;">0.117</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 0.4pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: normal;">0.117</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 0.4pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: normal;">0.118</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 0.4pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: normal;">0.117</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 0.4pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: normal;">0.091</td></tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0.4pt 0pt 0pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: normal;">1. Stage F:</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0.4pt 0pt 0pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0.4pt 0pt 0pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: normal;">48.990</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0.4pt 0pt 0pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0.4pt 0pt 0pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: normal;">47.731</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0.4pt 0pt 0pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: normal;">32.323</td></tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 6pt 4pt 6pt; font-weight: normal;">Instruments</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 6pt 4pt 6pt; font-weight: normal;">none</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 6pt 4pt 6pt; font-weight: normal;">Q4</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 6pt 4pt 6pt; font-weight: normal;">none</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 6pt 4pt 6pt; font-weight: normal;">Q4</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 6pt 4pt 6pt; font-weight: normal;">All Quarters</td></tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 1pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: normal;">Year of birth</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 1pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: normal;">no</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 1pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: normal;">no</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 1pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: normal;">yes</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 1pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: normal;">yes</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 1pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: normal;">yes</td></tr>
+</table>
+
+
+---
+
+# Additional Control Variables
+
+.left-wide[
+<table class="huxtable" style="border-collapse: collapse; border: 0px; margin-bottom: 2em; margin-top: 2em; ; margin-left: auto; margin-right: auto;  " id="tab:unnamed-chunk-9">
+<col><col><col><col><col><col><tr>
+<th style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 1pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: bold;"> </th><th style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 1pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: bold;">ols</th><th style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 1pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: bold;">2SLS</th><th style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 1pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: bold;">ols_yr</th><th style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 1pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: bold;">2SLS_yr</th><th style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 1pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: bold;">2SLS_all</th></tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 0pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: normal;">(Intercept)</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 0pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: normal;">4.995</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 0pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: normal;">4.955</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 0pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: normal;">5.017</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 0pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: normal;">4.966</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 0pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: normal;">4.592</td></tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 6pt 4pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 6pt 4pt 6pt; font-weight: normal;">(0.004)</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 6pt 4pt 6pt; font-weight: normal;">(0.358)</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 6pt 4pt 6pt; font-weight: normal;">(0.005)</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 6pt 4pt 6pt; font-weight: normal;">(0.354)</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 6pt 4pt 6pt; font-weight: normal;">(0.251)</td></tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 6pt 4pt 6pt; font-weight: normal;">s</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 6pt 4pt 6pt; font-weight: normal;">0.071</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 6pt 4pt 6pt; font-weight: normal;">0.074</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 6pt 4pt 6pt; font-weight: normal;">0.071</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 6pt 4pt 6pt; font-weight: normal;">0.075</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 6pt 4pt 6pt; font-weight: normal;">0.105</td></tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 1pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 1pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: normal;">(0.000)</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 1pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: normal;">(0.028)</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 1pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: normal;">(0.000)</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 1pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: normal;">(0.028)</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 1pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: normal;">(0.020)</td></tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 0.4pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: normal;">R2</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 0.4pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: normal;">0.117</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 0.4pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: normal;">0.117</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 0.4pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: normal;">0.118</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 0.4pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: normal;">0.117</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 0.4pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: normal;">0.091</td></tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0.4pt 0pt 0pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: normal;">1. Stage F:</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0.4pt 0pt 0pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0.4pt 0pt 0pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: normal;">48.990</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0.4pt 0pt 0pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0.4pt 0pt 0pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: normal;">47.731</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0.4pt 0pt 0pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: normal;">32.323</td></tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 6pt 4pt 6pt; font-weight: normal;">Instruments</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 6pt 4pt 6pt; font-weight: normal;">none</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 6pt 4pt 6pt; font-weight: normal;">Q4</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 6pt 4pt 6pt; font-weight: normal;">none</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 6pt 4pt 6pt; font-weight: normal;">Q4</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 6pt 4pt 6pt; font-weight: normal;">All Quarters</td></tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 1pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: normal;">Year of birth</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 1pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: normal;">no</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 1pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: normal;">no</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 1pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: normal;">yes</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 1pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: normal;">yes</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 1pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: normal;">yes</td></tr>
+</table>
+
+]
+
+.right-thin[
+**Adding year controls**...
+
+* leaves OLS mostly unchanged
+* slight increase in 2SLS estimate
+
+**Using all quarters as IV**...
+
+* Increases precision of 2SLS estimate a lot!
+* Point estimate is 10.5% now!
+
+]
+
+
+---
+
+# AK91: Taking Stock - The Quarter of Birth (QOB) IV
+
+.pull-left[
+
+* This will produce consistent estimates if
+    1. The IV predicts the endogenous regressor well.
+    2. The IV is as good as random / independent of OVs.
+    3. Can only impact outcome through schooling.
+    
+* How does the QOB perform along those lines?
+
+]
+
+--
+
+.pull-right[
+
+1. Plot of first stage and high F-stat offer compelling evidence for **relevance**. ✅
+
+2. Is QOB **independent** of, say, *maternal characteristics*? Birthdays are not really random - there are birth seasons for certain socioeconomic backgrounds. highest maternal schooling give birth in second quarter. (not in 4th! ✅)
+
+3. Exclusion: What if the youngest kids (born in Q4!) are the disadvantaged ones early on, which has long-term negative impacts? That would mean `\(E[u|z] \neq 0\)`! Well, with QOB the youngest ones actually do better (more schooling and higher wage)! ✅
+]
+
+---
+
+layout: false
+class: separator, middle
+
+# Mechanics of IV
+
+## Identification and Inference
+
+
+---
+
+# IV Identification
+
+Let's go back to our simple linear model:
+
+$$
+y = \beta_0 + \beta_1 x + u
+$$
+
+where we fear that `\(Cov(x,u) \neq 0\)`, `\(x\)` is *endogenous*.
+
+## Conditions for IV
+
+1. **first stage** or **relevance**: `\(Cov(z,x) \neq 0\)`
+2. **IV exogeneity**: `\(Cov(z,u) = 0\)`: the IV is exogenous in the outcome equation.
+
+---
+
+# Valid Model (A) vs Invalid Model (B) for IV `z`
+
+&lt;img src="05-IV2_files/figure-html/IV-dag2-1.svg" style="display: block; margin: auto;" /&gt;
+
+---
+
+# IV Identification
+
+.pull-left[
+
+&gt;## Conditions for IV
+
+&gt;1. **first stage** or **relevance**: `\(Cov(z,x) \neq 0\)`
+&gt;2. **IV exogeneity**: `\(Cov(z,u) = 0\)`: the IV is exogenous in the outcome equation.
+
+]
+
+.pull-right[
+
+* How does this *identify* `\(\beta_1\)`?
+
+* (How can we express `\(\beta_1\)` in terms of population moments to pin it's value down?)
+
+]
+
+---
+
+# IV Identification
+
+
+
+`\begin{align}
+Cov(z,y) &amp;= Cov(z, \beta_0 + \beta_1 x + u) \\
+         &amp;= \beta_1 Cov(z,x) + Cov(z,u) 
+\end{align}`
+
+.pull-left[
+Under condition 2. above (**IV exogeneity**), we have `\(Cov(z,u)=0\)`, hence
+
+$$
+Cov(z,y) = \beta_1 Cov(z,x) 
+$$
+]
+
+--
+
+.pull-right[
+and under condition 1. (**relevance**), we have `\(Cov(z,x)\neq0\)`, so that we can divide the equation through to obtain
+
+$$
+\beta_1 =  \frac{Cov(z,y)}{Cov(z,x)}.
+$$
+* `\(\beta_1\)` is *identified* via population moments `\(Cov(z,y)\)` and `\(Cov(z,x)\)`. 
+
+* We can *estimate* those moments via their *sample analogs*
+]
+
+---
+
+# IV Estimator
+
+Just plugging in for the population moments:
+
+`$$\hat{\beta}_1 = \frac{\sum_{i=1}^n (z_i - \bar{z})(y_i - \bar{y})}{\sum_{i=1}^n (z_i - \bar{z})(x_i - \bar{x})}$$`
+
+* The intercept estimate is `\(\hat{\beta}_0 = \bar{y} - \hat{\beta}_1 \bar{x}\)` 
+
+--
+
+* Given both assumptions 1. and 2. are satisfied, we say that *the IV estimator is consistent for `\(\beta_1\)`*. We write
+
+$$
+\text{plim}(\hat{\beta}_1) = \beta_1
+$$
+
+in words: the *probability limit* of `\(\hat{\beta}_1\)` is the true `\(\beta_1\)`. 
+
+* If this is true, we say that this estimator is **consistent**.
+
+---
+
+# IV Inference
+
+Assuming `\(E(u^2|z) = \sigma^2\)` the variance of the IV slope estimator is
+
+`$$Var(\hat{\beta}_{1,IV}) = \frac{\sigma^2}{n \sigma_x^2 \rho_{x,z}^2}$$`
+
+* `\(\sigma_x^2\)` is the population variance of `\(x\)`, 
+
+* `\(\sigma^2\)` the one of `\(u\)`, and  
+
+* `\(\rho_{x,z}\)` is the population correlation between `\(x\)` and `\(z\)`.
+
+--
+
+You can see 2 important things here:
+
+1. Without the term `\(\rho_{x,z}^2\)`, this is **like OLS variance**.
+2. As sample size `\(n\)` increases, the **variance decreases**.
+
+---
+
+# IV Variance is Always Larger than OLS Variance
+
+* Replace `\(\rho_{x,z}^2\)` with `\(R_{x,z}^2\)`, i.e. the R-squared of a regression of `\(x\)` on `\(z\)`:
+
+`$$Var(\hat{\beta}_{1,IV}) = \frac{\sigma^2}{n \sigma_x^2 R_{x,z}^2}$$`
+
+1. Given `\(R_{x,z}^2 &lt; 1\)` in most real life situations, we have that `\(Var(\hat{\beta}_{1,IV}) &gt; Var(\hat{\beta}_{1,OLS})\)` almost certainly.
+
+--
+
+1. The higher the correlation between `\(z\)` and `\(x\)`, the closer their `\(R_{x,z}^2\)` is to 1. With `\(R_{x,z}^2 = 1\)` we get back to the OLS variance. This is no surprise, because that implies that in fact `\(z = x\)`.
+
+So, if you have a valid, exogenous regressor `\(x\)`, you should *not* perform IV estimation using `\(z\)` to obtain `\(\hat{\beta}\)`, since your variance will be unnecessarily large.
+
+---
+
+# Returns to Education for Married Women
+
+Consider the following model for married women's wages:
+
+$$
+\log wage = \beta_0 + \beta_1 educ + u
+$$
+Let's run an OLS on this, and then compare it to an IV estimate using *father's education*. Keep in mind that this is a valid IV `\(z\)` if 
+
+1. *fatheduc* and *educ* are correlated
+2. *fatheduc* and `\(u\)` are not correlated.
+
+---
+
+# Returns to Education for Married Women
+
+
+
+```r
+data(mroz,package = "wooldridge")
+mods = list()
+mods$OLS &lt;- lm(lwage ~ educ, data = mroz)
+mods[['First Stage']] &lt;- lm(educ ~ fatheduc, data = subset(mroz, inlf == 1))
+mods$IV  &lt;- estimatr::iv_robust(lwage ~ educ | fatheduc, data = mroz)
+```
+
+<table class="huxtable" style="border-collapse: collapse; border: 0px; margin-bottom: 2em; margin-top: 2em; ; margin-left: auto; margin-right: auto;  " id="tab:unnamed-chunk-10">
+<col><col><col><col><tr>
+<th style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 1pt 0pt;    padding: 5pt 6pt 5pt 6pt; font-weight: bold;"> </th><th style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 1pt 0pt;    padding: 5pt 6pt 5pt 6pt; font-weight: bold;">OLS</th><th style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 1pt 0pt;    padding: 5pt 6pt 5pt 6pt; font-weight: bold;">First Stage</th><th style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 1pt 0pt;    padding: 5pt 6pt 5pt 6pt; font-weight: bold;">IV</th></tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 0pt 0pt;    padding: 5pt 6pt 5pt 6pt; font-weight: normal;">(Intercept)</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 0pt 0pt;    padding: 5pt 6pt 5pt 6pt; font-weight: normal;">-0.185</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 0pt 0pt;    padding: 5pt 6pt 5pt 6pt; font-weight: normal;">10.237</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 0pt 0pt;    padding: 5pt 6pt 5pt 6pt; font-weight: normal;">0.441</td></tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 5pt 6pt 5pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 5pt 6pt 5pt 6pt; font-weight: normal;">(0.185)</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 5pt 6pt 5pt 6pt; font-weight: normal;">(0.276)</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 5pt 6pt 5pt 6pt; font-weight: normal;">(0.467)</td></tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 5pt 6pt 5pt 6pt; font-weight: normal;">educ</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 5pt 6pt 5pt 6pt; font-weight: normal;">0.109</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 5pt 6pt 5pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 5pt 6pt 5pt 6pt; font-weight: normal;">0.059</td></tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 5pt 6pt 5pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 5pt 6pt 5pt 6pt; font-weight: normal;">(0.014)</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 5pt 6pt 5pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 5pt 6pt 5pt 6pt; font-weight: normal;">(0.037)</td></tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 5pt 6pt 5pt 6pt; font-weight: normal;">fatheduc</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 5pt 6pt 5pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 5pt 6pt 5pt 6pt; font-weight: normal;">0.269</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 5pt 6pt 5pt 6pt; font-weight: normal;"></td></tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 0.4pt 0pt;    padding: 5pt 6pt 5pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 0.4pt 0pt;    padding: 5pt 6pt 5pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 0.4pt 0pt;    padding: 5pt 6pt 5pt 6pt; font-weight: normal;">(0.029)</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 0.4pt 0pt;    padding: 5pt 6pt 5pt 6pt; font-weight: normal;"></td></tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0.4pt 0pt 0pt 0pt;    padding: 5pt 6pt 5pt 6pt; font-weight: normal;">Num.Obs.</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0.4pt 0pt 0pt 0pt;    padding: 5pt 6pt 5pt 6pt; font-weight: normal;">428</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0.4pt 0pt 0pt 0pt;    padding: 5pt 6pt 5pt 6pt; font-weight: normal;">428</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0.4pt 0pt 0pt 0pt;    padding: 5pt 6pt 5pt 6pt; font-weight: normal;">428</td></tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 1pt 0pt;    padding: 5pt 6pt 5pt 6pt; font-weight: normal;">R2</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 1pt 0pt;    padding: 5pt 6pt 5pt 6pt; font-weight: normal;">0.118</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 1pt 0pt;    padding: 5pt 6pt 5pt 6pt; font-weight: normal;">0.173</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 1pt 0pt;    padding: 5pt 6pt 5pt 6pt; font-weight: normal;">0.093</td></tr>
+</table>
+
+
+---
+
+# IV Standard Errors
+
+&lt;img src="05-IV2_files/figure-html/se-plot-1.svg" style="display: block; margin: auto;" /&gt;
+
+---
+
+# IV with a Weak Instrument
+
+* IV is consistent under given assumptions.
+
+* However, *even if* we have only very small `\(Cor(z,u)\)`, we can get wrong-footed
+
+* Small corrleation between `\(x\)` and `\(z\)` can produce **inconsistent** estimates. 
+
+.pull-left[
+&lt;br&gt;
+&lt;br&gt;
+
+$$
+\text{plim}(\hat{\beta}_{1,IV}) = \beta_1 + \frac{Cor(z,u)}{Cor(z,x)} \cdot \frac{\sigma_u}{\sigma_x}
+$$
+]
+
+--
+
+.pull-right[
+* Take `\(Cor(z,u)\)` is very small,
+* A **weak instrument** is one with only a small absolute value for `\(Cor(z,x)\)` 
+* This will blow up this second term in the probability limit. 
+* Even with a very big sample size `\(n\)`, our estimator would *not* converge to the true population parameter `\(\beta_1\)`, because we are using a weak instrument.
+]
+
+---
+
+# Weak Stuff
+
+To illustrate this point, let's assume we want to look at the impact of number of packs of cigarettes smoked per day by pregnant women (*packs*) on the birthweight of their child (*bwght*):
+
+$$
+\log(bwght) = \beta_0 + \beta_1 packs + u
+$$
+
+We are worried that smoking behavior is correlated with a range of other health-related variables which are in `\(u\)` and which could impact the birthweight of the child. So we look for an IV. Suppose we use the price of cigarettes (*cigprice*), assuming that the price of cigarettes is uncorrelated with factors in `\(u\)`. Let's run the first stage of *cigprice* on *packs* and then let's show the 2SLS estimates:
+
+
+---
+
+# Weak Stuff
+
+
+
+```r
+data(bwght, package = "wooldridge")
+mods &lt;- list()
+mods[["First Stage"]] &lt;- lm(packs ~ cigprice, data = bwght)
+mods[["IV"]] &lt;- estimatr::iv_robust(log(bwght) ~  packs | cigprice, data = bwght, diagnostics = TRUE)
+```
+
+<table class="huxtable" style="border-collapse: collapse; border: 0px; margin-bottom: 2em; margin-top: 2em; ; margin-left: auto; margin-right: auto;  " id="tab:unnamed-chunk-11">
+<col><col><col><tr>
+<th style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 1pt 0pt;    padding: 5pt 6pt 5pt 6pt; font-weight: bold;"> </th><th style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 1pt 0pt;    padding: 5pt 6pt 5pt 6pt; font-weight: bold;">First Stage</th><th style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 1pt 0pt;    padding: 5pt 6pt 5pt 6pt; font-weight: bold;">IV</th></tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 0pt 0pt;    padding: 5pt 6pt 5pt 6pt; font-weight: normal;">(Intercept)</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 0pt 0pt;    padding: 5pt 6pt 5pt 6pt; font-weight: normal;">0.067</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 0pt 0pt;    padding: 5pt 6pt 5pt 6pt; font-weight: normal;">4.448</td></tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 5pt 6pt 5pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 5pt 6pt 5pt 6pt; font-weight: normal;">(0.103)</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 5pt 6pt 5pt 6pt; font-weight: normal;">(0.940)</td></tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 5pt 6pt 5pt 6pt; font-weight: normal;">cigprice</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 5pt 6pt 5pt 6pt; font-weight: normal;">0.000</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 5pt 6pt 5pt 6pt; font-weight: normal;"></td></tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 5pt 6pt 5pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 5pt 6pt 5pt 6pt; font-weight: normal;">(0.001)</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 5pt 6pt 5pt 6pt; font-weight: normal;"></td></tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 5pt 6pt 5pt 6pt; font-weight: normal;">packs</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 5pt 6pt 5pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 5pt 6pt 5pt 6pt; font-weight: normal;">2.989</td></tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 0.4pt 0pt;    padding: 5pt 6pt 5pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 0.4pt 0pt;    padding: 5pt 6pt 5pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 0.4pt 0pt;    padding: 5pt 6pt 5pt 6pt; font-weight: normal;">(8.996)</td></tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0.4pt 0pt 0pt 0pt;    padding: 5pt 6pt 5pt 6pt; font-weight: normal;">R2</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0.4pt 0pt 0pt 0pt;    padding: 5pt 6pt 5pt 6pt; font-weight: normal;">0.000</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0.4pt 0pt 0pt 0pt;    padding: 5pt 6pt 5pt 6pt; font-weight: normal;">-23.230</td></tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 1pt 0pt;    padding: 5pt 6pt 5pt 6pt; font-weight: normal;">1. Stage F:</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 1pt 0pt;    padding: 5pt 6pt 5pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 1pt 0pt;    padding: 5pt 6pt 5pt 6pt; font-weight: normal;">0.121</td></tr>
+</table>
+
+
+
+---
+
+# Weak Stuff
+
+.pull-left[
+
+* The first columns shows: very weak first stage. *cigprice* has zero impact on packs it seems!
+
+* `\(R^2\)` is zero.
+
+* What is we use this IV nevertheless?
+]
+
+--
+
+.pull-right[
+
+* in the second column: very large, positive(!) impact of packs smoked on birthweight. 🤔
+
+* Huge Standard Error though.
+
+* An `\(R^2\)` of -23?!
+
+* F-stat of first stage: 0.121. Corresponds to a p-value of 0.728 : we **cannot** reject the H0 of an insignificant first stage here *at all*.
+
+* So: **invalid** approach. ❌
+]
+
+
+
+---
+
+
+class: title-slide-final, middle
+background-image: url(../img/logo/ScPo-econ.png)
+background-size: 250px
+background-position: 9% 19%
+
+# END
+
+
+
+
+|                                                                                                            |                                   |
+| :--------------------------------------------------------------------------------------------------------- | :-------------------------------- |
+| &lt;a href="mailto:florian.oswald@sciencespo.fr"&gt;.ScPored[&lt;i class="fa fa-paper-plane fa-fw"&gt;&lt;/i&gt;]               | florian.oswald@sciencespo.fr       |
+| &lt;a href="https://github.com/ScPoEcon/Advanced-Metrics-slides"&gt;.ScPored[&lt;i class="fa fa-link fa-fw"&gt;&lt;/i&gt;] | Slides |
+| &lt;a href="https://scpoecon.github.io/ScPoEconometrics"&gt;.ScPored[&lt;i class="fa fa-link fa-fw"&gt;&lt;/i&gt;] | Book |
+| &lt;a href="http://twitter.com/ScPoEcon"&gt;.ScPored[&lt;i class="fa fa-twitter fa-fw"&gt;&lt;/i&gt;]                          | @ScPoEcon                         |
+| &lt;a href="http://github.com/ScPoEcon"&gt;.ScPored[&lt;i class="fa fa-github fa-fw"&gt;&lt;/i&gt;]                          | @ScPoEcon                       |
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script src="../../js/ru_xaringan.js"></script>
+<script>var slideshow = remark.create({
+"highlightStyle": "github",
+"highlightLines": true,
+"countIncrementalSlides": false,
+"ratio": "16:9"
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>
