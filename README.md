@@ -12,7 +12,7 @@ Lecture 2: Recap 2 from intro course [[HTML](https://raw.githack.com/ScPoEcon/Ad
 
 Session 3: Instrumental Variables and Causality 1 [[HTML](https://raw.githack.com/ScPoEcon/Advanced-Metrics-slides/master/lectures/04-IV/04-IV.html)]
 
-Session 4: Instrumental Variables and Causality 2
+Session 4: Instrumental Variables and Causality 2 [[HTML](https://raw.githack.com/ScPoEcon/Advanced-Metrics-slides/master/lectures/05-IV2/05-IV2.html)]
 
 Session 5: Instrumental Variables and Causality 3
 
