@@ -1,0 +1,372 @@
+---
+title: "ScPoEconometrics: Advanced"
+subtitle: "Panel Data"
+author: "Florian Oswald"
+date: "SciencesPo Paris </br> `r Sys.Date()`"
+output:
+  xaringan::moon_reader:
+    lib_dir: libs
+    css: [default, "../../css/scpo.css", "../../css/scpo-fonts.css"]
+    nature:
+      beforeInit: ["../../js/ru_xaringan.js"]
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+      ratio: "16:9"
+    includes:
+      in_header: ["../../libs/partials/header.html"]
+---
+
+layout: true
+
+<div class="my-footer"><img src="../../img/logo/ScPo-shield.png" style="height: 60px;"/></div> 
+
+---
+
+```{r setup, include=FALSE,warning=FALSE,message=FALSE}
+options(htmltools.dir.version = FALSE)
+knitr::opts_chunk$set(
+  message = FALSE,
+  warning = FALSE,
+  dev = "svg",
+  cache = TRUE,
+  fig.align = "center"
+  #fig.width = 11,
+  #fig.height = 5
+)
+
+# define vars
+om = par("mar")
+lowtop = c(om[1],om[2],0.1,om[4])
+library(magrittr)
+
+```
+
+# Where Did We Stop Last Time?
+
+.pull-left[
+* **IV** estimation
+
+* Some important applications
+
+* Some pitfalls
+
+]
+
+--
+
+.pull-right[
+**Today**
+
+1. Talk about Mid-Term Exam! 😬
+
+2. Revisit the Ability Bias in an App 😎
+
+3. Introduce Panel Data
+
+]
+
+
+---
+
+# Cross-Sectional Data
+
+.pull-left[
+So far, we dealt with data that looks like this:
+
+```{r,message=FALSE,warning=FALSE,echo = FALSE}
+library(dplyr)
+library(ggplot2)
+data(crime4,package = "wooldridge")
+crime4 %>%
+  filter(year == 81) %>%
+  arrange(county,year) %>%
+  select(county, crmrte, prbarr) %>%
+  rename(County = county,
+         CrimeRate = crmrte,
+         ProbofArrest = prbarr) %>%
+  slice(1:5) %>%
+  knitr::kable(align = "ccc")
+```
+]
+
+.pull-right[
+
+* We have a unit identifier (like `County` here), 
+
+* Observables on each unit.
+
+* Usually called a **cross-sectional** dataset
+
+* Provides single snapshot view
+
+* Each row, in other words, is one *observation*.
+]
+
+
+---
+
+# Panel Data
+
+.pull-left[
+Now, let's add a `time` index: `Year`.
+
+```{r,echo = FALSE}
+crime4 %>%
+  select(county, year, crmrte, prbarr) %>%
+  arrange(county,year) %>%
+  rename(County = county,
+         Year = year,
+         CrimeRate = crmrte,
+         ProbofArrest = prbarr) %>%
+  slice(1:9) %>%
+  knitr::kable(align = "ccc")
+```
+]
+
+.pull-right[
+
+* Next to the unit identifier (`County`) we now have `Year` 
+
+* Now a pair (`County`,`Year`) indexes one observation.
+
+* We call this a **panel** or **longitudinal** dataset
+
+* We can track units *over time*.
+
+]
+
+
+---
+
+# Crime Rates and Probability of Arrest
+
+* The above data can be loaded with
+    ```{r, eval = FALSE}
+    data(crime4,package = "wooldridge")
+    ```
+
+* They are from [C. Cornwell and W. Trumball (1994), “Estimating the Economic Model of Crime with Panel Data”](https://www.amherst.edu/media/view/121570/original/CornwellTrumbullCrime%2BElasticities.pdf). 
+
+--
+
+* One question here: *how big is the deterrent effect of law enforcement*? If you know you are more likely to get arrested, will you be less likely to commit a crime?
+
+--
+
+* This is tricky: Does high crime *cause* stronger police response, which acts as a deterrent, or is crime low because deterrent is strong to start with?
+
+* This is sometimes called a *simultaneous equation model* situation: police response impacts crime, but crime impacts police response
+
+\begin{align}
+police &= \alpha_0 + \alpha_1 crime \\
+crime &= \beta_0 + \beta_1 police
+\end{align}
+
+
+---
+
+# Crime Rates and Probability of Arrest
+
+.pull-left[
+
+* Most literature prior to that paper estimated simultaneous equations off cross sectional data
+
+* Cornwell and Trumball are worried about **unobserved heterogeneity** between jurisdictions.
+
+* Why? What could possibly go wrong?
+
+]
+
+.pull-right[
+
+* Let's pick out 4 counties from their dataset
+
+* Let's look at the crime rate vs probability of arrest relationship
+
+* First for all of them together as a single cross section
+
+* Then taking advantage of the panel structure (i.e. each county over time).
+
+]
+
+
+---
+
+# Crime vs Arrest in Cross Section
+
+.left-thin[
+
+1. Subset data to 4 counties
+
+2. plot probability of arrest vs crime rate.
+
+```{r crime1,echo = TRUE, eval = FALSE}
+css = crime4 %>% 
+  filter(county %in% 
+           c(1,3,145, 23))  
+
+ggplot(css,
+       aes(x = prbarr, 
+           y = crmrte)) + 
+  geom_point() + 
+  geom_smooth(method="lm",
+              se=FALSE) + 
+  theme_bw() +
+  labs(x = 'Probability of Arrest', 
+       y = 'Crime Rate')
+```
+]
+
+.right-wide[
+```{r,echo = FALSE,fig.height=5}
+css = crime4 %>% 
+  filter(county %in% c(1,3,145, 23))  # subset to 4 counties
+
+ggplot(css,aes(x =  prbarr, y = crmrte)) + 
+  geom_point() + 
+  geom_smooth(method="lm",se=FALSE) + 
+  theme_bw() +
+  labs(x = 'Probability of Arrest', y = 'Crime Rate')
+```
+]
+
+---
+
+# Crime vs Arrest in Cross Section: Positive Relationship!
+
+.pull-left[
+
+* We see an upward sloping line!
+
+* Higher probability of arrest is associated to higher crime rates.
+
+* How strong is the effect?
+]
+
+--
+
+.pull-right[
+```{r}
+xsection = lm(crmrte ~ prbarr, css)
+coef(xsection)[2]  # gets slope coef
+```
+
+```{r,echo = FALSE}
+xsection_p = round(predict(xsection,newdata = data.frame(prbarr = c(0.2,0.3))),3)
+```
+
+* Increasing probability of arrest by 1 unit (i.e. 100 percentage point), increases the crime rate by `r coef(xsection)[2]`. So, it becomes twice as likely that you get caught, an overall crime would increase by 0.064 crimes per person.
+
+* Increase of 10 percentage points in the probability of arrest (e.g. `prbarr` goes from 0.2 to 0.3) ...
+
+* ... is associated with an increase in crime rate from `r xsection_p[1]` to `r xsection_p[2]`, or a `r round(100 * diff(xsection_p) / xsection_p[1],2)` percent increase in the crime rate.
+
+]
+
+---
+
+# Ok, but what does that *mean*?
+
+
+* Literally: counties with a higher probability of being arrested also have a higher crime rate. 
+
+* So, does it mean that as there is more crime in certain areas, the police become more efficient at arresting criminals, and so the probability of getting arrested on any committed crime goes up?
+
+* What does police efficiency depend on? 
+
+* Does the poverty level in a county matter for this? 
+
+* The local laws?
+
+* 🤯 wow, there seem to be too many things left out of this simple picture. 
+
+
+---
+
+# Crime in a DAG
+
+```{r cri-dag,echo = FALSE,message = FALSE,fig.height=5.5}
+library(ggdag)
+coords <- list(
+    x = c(ProbArrest = 1,LawAndOrder = 1, Police = 1.5, CivilRights = 3,Poverty = 3, CrimeRate = 5, LocalStuff = 5),
+    y = c(ProbArrest = 1,LawAndOrder = 4, Police = 2.5, CivilRights = 2,Poverty = 4, CrimeRate = 1, LocalStuff = 4)
+    )
+dagify(CrimeRate ~ ProbArrest,
+       CrimeRate ~ LocalStuff,
+       CrimeRate ~ Poverty,
+       CrimeRate ~ CivilRights,
+       ProbArrest ~ LocalStuff,
+       Poverty ~ LocalStuff,
+       ProbArrest ~ Poverty,
+       ProbArrest ~ LawAndOrder,
+       ProbArrest ~ Police,
+       ProbArrest ~ LawAndOrder,
+       CivilRights ~ LawAndOrder,
+       Police ~ LawAndOrder,
+       labels = c("CrimeRate" = "Crime Rate",
+                  "ProbArrest" = "ProbArrest",
+                  "LocalStuff" = "LocalStuff",
+                  "Poverty" = "Poverty",
+                  "Police" = "Police",
+                  "CivilRights" = "CivilRights",
+                  "LawAndOrder" = "LawAndOrder"
+                  ),
+       exposure = "ProbArrest",
+       outcome = "CrimeRate",
+       coords = coords) %>%
+  ggdag(text = FALSE, use_labels = "label") + ggtitle("What causes the Crime Rate in County i?") + theme_dag()
+```
+
+```{css, echo = F}
+.reduced_opacity {
+  opacity: 0.2;
+}
+```
+
+---
+background-image: url(../../img/crime-dag.png)
+background-size: contain
+
+
+
+
+# Crime in a DAG
+
+
+**Fixed Characteristics**: vary by county
+
+* `LocalStuff` are things that describe the County, like geography, and other persistent features.
+* `LawAndOrder`: commitment to *law and order politics* of local politicians
+* `CivilRights`: how many civil rights you have
+
+and how many `CivilRights` one gets might change a little from year to year, but not very drastically. Let's assume they are fixed characteristics as well.
+
+**Time-varying Characteristics**: vary by county and by year
+
+* `Police` budget: an elected politician has some discretion over police spending
+
+* `Poverty` level varies with the national/global state of the economy.
+
+
+---
+
+
+class: title-slide-final, middle
+background-image: url(../img/logo/ScPo-econ.png)
+background-size: 250px
+background-position: 9% 19%
+
+# END
+
+
+
+
+|                                                                                                            |                                   |
+| :--------------------------------------------------------------------------------------------------------- | :-------------------------------- |
+| <a href="mailto:florian.oswald@sciencespo.fr">.ScPored[<i class="fa fa-paper-plane fa-fw"></i>]               | florian.oswald@sciencespo.fr       |
+| <a href="https://github.com/ScPoEcon/Advanced-Metrics-slides">.ScPored[<i class="fa fa-link fa-fw"></i>] | Slides |
+| <a href="https://scpoecon.github.io/ScPoEconometrics">.ScPored[<i class="fa fa-link fa-fw"></i>] | Book |
+| <a href="http://twitter.com/ScPoEcon">.ScPored[<i class="fa fa-twitter fa-fw"></i>]                          | @ScPoEcon                         |
+| <a href="http://github.com/ScPoEcon">.ScPored[<i class="fa fa-github fa-fw"></i>]                          | @ScPoEcon                       |
+
