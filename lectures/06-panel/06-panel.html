@@ -247,7 +247,7 @@ coef(xsection)[2]  # gets slope coef
 
 
 
-* Increasing probability of arrest by 1 unit (i.e. 100 percentage point), increases the crime rate by 0.064801. So, it becomes twice as likely that you get caught, an overall crime would increase by 0.064 crimes per person.
+* Increasing probability of arrest by 1 unit (i.e. 100 percentage point), increases the crime rate by 0.064801. So, if we double the probability of arrest, crime would increase by 0.064 crimes per person.
 
 * Increase of 10 percentage points in the probability of arrest (e.g. `prbarr` goes from 0.2 to 0.3) ...
 
@@ -302,7 +302,6 @@ background-position: 93% 10%
 * `LawAndOrder`: commitment to *law and order politics* of local politicians
 * `CivilRights`: how many civil rights you have
 
-and how many `CivilRights` one gets might change a little from year to year, but not very drastically. Let's assume they are fixed characteristics as well.
 
 **Time-varying Characteristics**: vary by county and by year
 
@@ -358,7 +357,7 @@ background-image: url("https://media.giphy.com/media/3oKIPlLZEbEbacWqOc/giphy.gi
 background-position: 90% 50%
 background-size: 300px
 
-# Within and Between Variation
+# Within and Between Variation: Give us a Plot.
 
 .left-wide[
 &lt;img src="06-panel_files/figure-html/unnamed-chunk-8-1.svg" style="display: block; margin: auto;" /&gt;
@@ -383,7 +382,7 @@ background-size: 300px
 
 ---
 
-# Accounting for Grouped Data
+# Accounting for Grouped Data: Introducing the *Fixed Effect*
 
 .left-wide[
 &lt;img src="06-panel_files/figure-html/cri-dag2-1.svg" style="display: block; margin: auto;" /&gt;
@@ -417,7 +416,7 @@ We've seen *unobserved variable bias* (OVB). For example, if the true model read
 $$
 y_i = \beta_0 + \beta_1 x_i + c_i + u_i
 $$
-if `\(c_i\)` unobservable and `\(Cov(x_i,c_i)\neq0 \Rightarrow E[u_i+c_i|x_i]\neq 0,\text{ with }u_i + c_i\)` total unobserved component). 
+if `\(c_i\)` unobservable and `\(Cov(x_i,c_i)\neq0 \Rightarrow E[u_i+c_i|x_i]\neq 0,\text{ with }u_i + c_i\)` total unobserved component. 
 
 --
 
@@ -455,7 +454,7 @@ if `\(c_i\)` unobservable and `\(Cov(x_i,c_i)\neq0 \Rightarrow E[u_i+c_i|x_i]\ne
 &lt;br&gt;
 &lt;br&gt;
 
-* Simplest approach: include a dummy variable for each `\(i\)`. 
+* Simplest approach: include a dummy variable for each group `\(i\)`. 
 
 * This is literally *controlling for county* i
 
@@ -527,6 +526,9 @@ lm(deltay ~ deltax, diff_data)
     
     
 ---
+background-image: url(../../img/crime-dag2.png)
+background-size: 300px
+background-position: 20% 99%
 
 
 # The Within Transformation
