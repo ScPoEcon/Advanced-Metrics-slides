@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>ScPoEconometrics: Advanced</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Florian Oswald" />
+    <script src="libs/header-attrs/header-attrs.js"></script>
+    <link href="libs/remark-css/default.css" rel="stylesheet" />
+    <script src="https://use.fontawesome.com/5235085b15.js"></script>
+
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-41584331-6"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'UA-41584331-6');
+    </script>
+
+    <link rel="stylesheet" href="../../css/scpo.css" type="text/css" />
+    <link rel="stylesheet" href="../../css/scpo-fonts.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+# ScPoEconometrics: Advanced
+## Panel Data
+### Florian Oswald
+### SciencesPo Paris </br> 2020-11-02
+
+---
+
+
+layout: true
+
+&lt;div class="my-footer"&gt;&lt;img src="../../img/logo/ScPo-shield.png" style="height: 60px;"/&gt;&lt;/div&gt; 
+
+---
+
+
+
+# Where Did We Stop Last Time?
+
+.pull-left[
+* **IV** estimation
+
+* Some important applications
+
+* Some pitfalls
+
+]
+
+--
+
+.pull-right[
+**Today**
+
+1. Talk about Mid-Term Exam! 😬
+
+2. Revisit the Ability Bias [in an App](https://floswald.shinyapps.io/ScPoMetrics-ability-bias/) 😎
+
+3. Introduce Panel Data
+
+]
+
+
+---
+
+# Cross-Sectional Data
+
+.pull-left[
+So far, we dealt with data that looks like this:
+
+
+| County | CrimeRate | ProbofArrest |
+|:------:|:---------:|:------------:|
+|   1    | 0.0398849 |   0.289696   |
+|   3    | 0.0163921 |   0.202899   |
+|   5    | 0.0093372 |   0.406593   |
+|   7    | 0.0219159 |   0.431095   |
+|   9    | 0.0075178 |   0.631579   |
+]
+
+.pull-right[
+
+* We have a unit identifier (like `County` here), 
+
+* Observables on each unit.
+
+* Usually called a **cross-sectional** dataset
+
+* Provides single snapshot view
+
+* Each row, in other words, is one *observation*.
+]
+
+
+---
+
+# Panel Data
+
+.pull-left[
+Now, let's add a `time` index: `Year`.
+
+
+| County | Year | CrimeRate | ProbofArrest |
+|:------:|:----:|:---------:|:------------:|
+|   1    |  81  | 0.0398849 |   0.289696   |
+|   1    |  82  | 0.0383449 |   0.338111   |
+|   1    |  83  | 0.0303048 |   0.330449   |
+|   1    |  84  | 0.0347259 |   0.362525   |
+|   1    |  85  | 0.0365730 |   0.325395   |
+|   1    |  86  | 0.0347524 |   0.326062   |
+|   1    |  87  | 0.0356036 |   0.298270   |
+|   3    |  81  | 0.0163921 |   0.202899   |
+|   3    |  82  | 0.0190651 |   0.162218   |
+]
+
+.pull-right[
+
+* Next to the unit identifier (`County`) we now have `Year` 
+
+* Now a pair (`County`,`Year`) indexes one observation.
+
+* We call this a **panel** or **longitudinal** dataset
+
+* We can track units *over time*.
+
+]
+
+
+---
+
+# Crime Rates and Probability of Arrest
+
+* The above data can be loaded with
+    
+    ```r
+    data(crime4,package = "wooldridge")
+    ```
+
+* They are from [C. Cornwell and W. Trumball (1994), “Estimating the Economic Model of Crime with Panel Data”](https://www.amherst.edu/media/view/121570/original/CornwellTrumbullCrime%2BElasticities.pdf). 
+
+--
+
+* One question here: *how big is the deterrent effect of law enforcement*? If you know you are more likely to get arrested, will you be less likely to commit a crime?
+
+--
+
+* This is tricky: Does high crime *cause* stronger police response, which acts as a deterrent, or is crime low because deterrent is strong to start with?
+
+* This is sometimes called a *simultaneous equation model* situation: police response impacts crime, but crime impacts police response
+
+`\begin{align}
+police &amp;= \alpha_0 + \alpha_1 crime \\
+crime &amp;= \beta_0 + \beta_1 police
+\end{align}`
+
+
+---
+
+# Crime Rates and Probability of Arrest
+
+.pull-left[
+
+* Most literature prior to that paper estimated simultaneous equations off cross sectional data
+
+* Cornwell and Trumball are worried about **unobserved heterogeneity** between jurisdictions.
+
+* Why? What could possibly go wrong?
+
+]
+
+.pull-right[
+
+* Let's pick out 4 counties from their dataset
+
+* Let's look at the crime rate vs probability of arrest relationship
+
+* First for all of them together as a single cross section
+
+* Then taking advantage of the panel structure (i.e. each county over time).
+
+]
+
+
+---
+
+# Crime vs Arrest in Cross Section
+
+.left-thin[
+
+1. Subset data to 4 counties
+
+2. plot probability of arrest vs crime rate.
+
+
+```r
+css = crime4 %&gt;% 
+  filter(county %in% 
+           c(1,3,145, 23))  
+
+ggplot(css,
+       aes(x = prbarr, 
+           y = crmrte)) + 
+  geom_point() + 
+  geom_smooth(method="lm",
+              se=FALSE) + 
+  theme_bw() +
+  labs(x = 'Probability of Arrest', 
+       y = 'Crime Rate')
+```
+]
+
+.right-wide[
+&lt;img src="06-panel_files/figure-html/unnamed-chunk-4-1.svg" style="display: block; margin: auto;" /&gt;
+]
+
+---
+
+# Crime vs Arrest in Cross Section: Positive Relationship!
+
+.pull-left[
+
+* We see an upward sloping line!
+
+* Higher probability of arrest is associated to higher crime rates.
+
+* How strong is the effect?
+]
+
+--
+
+.pull-right[
+
+```r
+xsection = lm(crmrte ~ prbarr, css)
+coef(xsection)[2]  # gets slope coef
+```
+
+```
+##     prbarr 
+## 0.06480104
+```
+
+
+
+* Increasing probability of arrest by 1 unit (i.e. 100 percentage point), increases the crime rate by 0.064801. So, it becomes twice as likely that you get caught, an overall crime would increase by 0.064 crimes per person.
+
+* Increase of 10 percentage points in the probability of arrest (e.g. `prbarr` goes from 0.2 to 0.3) ...
+
+* ... is associated with an increase in crime rate from 0.021 to 0.028, or a 33.33 percent increase in the crime rate.
+
+]
+
+---
+
+# Ok, but what does that *mean*?
+
+
+* Literally: counties with a higher probability of being arrested also have a higher crime rate. 
+
+* So, does it mean that as there is more crime in certain areas, the police become more efficient at arresting criminals, and so the probability of getting arrested on any committed crime goes up?
+
+* What does police efficiency depend on? 
+
+* Does the poverty level in a county matter for this? 
+
+* The local laws?
+
+* 🤯 wow, there seem to be too many things left out of this simple picture. 
+
+
+---
+
+# Crime in a DAG
+
+&lt;img src="06-panel_files/figure-html/cri-dag-1.svg" style="display: block; margin: auto;" /&gt;
+
+&lt;style type="text/css"&gt;
+.reduced_opacity {
+  opacity: 0.2;
+}
+&lt;/style&gt;
+
+---
+background-image: url(../../img/crime-dag.png)
+background-size: 400px
+background-position: 93% 10%
+
+
+
+
+# Crime in a DAG
+
+.left-wide[
+**Fixed Characteristics**: vary by county
+
+* `LocalStuff` are things that describe the County, like geography, and other persistent features.
+* `LawAndOrder`: commitment to *law and order politics* of local politicians
+* `CivilRights`: how many civil rights you have
+
+and how many `CivilRights` one gets might change a little from year to year, but not very drastically. Let's assume they are fixed characteristics as well.
+
+**Time-varying Characteristics**: vary by county and by year
+
+* `Police` budget: an elected politician has some discretion over police spending
+
+* `Poverty` level varies with the national/global state of the economy.
+
+] 
+
+.right-thin[
+
+
+]
+
+
+---
+
+# Within and Between Variation
+
+You will often hear the terms *within* and *between* variation in panel data contexts.
+
+.pull-left[
+
+## Within Variation
+
+* things that change *within each group* over time: 
+
+* here we said police budgets
+
+* and poverty levels would change within each group and over time. 
+
+]
+
+.pull-right[
+
+## Between Variation
+
+* Things that are **fixed** for each group over time:
+
+* `LocalStuff`
+
+* `LawAndOrder` and 
+
+* `CivilRights` 
+
+* differ only across or **between** groups
+
+
+]
+
+---
+background-image: url("https://media.giphy.com/media/3oKIPlLZEbEbacWqOc/giphy.gif")
+background-position: 90% 50%
+background-size: 300px
+
+# Within and Between Variation
+
+.left-wide[
+&lt;img src="06-panel_files/figure-html/unnamed-chunk-8-1.svg" style="display: block; margin: auto;" /&gt;
+]
+
+
+---
+
+# Pooled OLS recovers *between* variation
+
+
+
+* Let's add the mean of `prbarr` and `crmrte` for each of those counties to the scatter plot!
+
+* And then a regression through those 4 points!
+
+
+--
+
+
+&lt;img src="06-panel_files/figure-html/unnamed-chunk-9-1.svg" style="display: block; margin: auto;" /&gt;
+
+---
+
+# Accounting for Grouped Data
+
+.left-wide[
+&lt;img src="06-panel_files/figure-html/cri-dag2-1.svg" style="display: block; margin: auto;" /&gt;
+]
+
+.right-thin[
+
+* Collect all group-specific time-invariant features in the factor `County`.
+
+* Takes care of all factors which do *not* vary over time within each unit. 
+
+* We can **net out** the group effect!
+
+* We call `County` a **fixed effect**.
+
+]
+
+
+---
+class: separator, middle
+
+# Fixed Effects Estimation in `R`
+
+
+---
+
+# OVB, IV and Panel Data
+
+We've seen *unobserved variable bias* (OVB). For example, if the true model read:
+
+$$
+y_i = \beta_0 + \beta_1 x_i + c_i + u_i
+$$
+if `\(c_i\)` unobservable and `\(Cov(x_i,c_i)\neq0 \Rightarrow E[u_i+c_i|x_i]\neq 0,\text{ with }u_i + c_i\)` total unobserved component). 
+
+--
+
+.pull-left[
+
+## Cross-Sectional Solution
+
+* where `\(c=A_i\)` and `\(x=s\)` was schooling.
+
+* *ability bias*. 
+
+* Find IV correlated with schooling but not ability
+]
+
+--
+
+.pull-right[
+
+## Panel Data
+
+`$$y_{it} = \beta_1 x_{it} + c_i + u_{it},\quad t=1,2,...T$$`
+* `\(c_i\)`: *individual fixed effect*, *unobserved effect* or *unobserved heterogeneity*. 
+
+* `\(c_i\)`: is fixed over time (ability `\(A_i\)` for example), but can be correlated with `\(x_{it}\)`!
+]
+
+
+
+---
+
+# Dummy Variable Regression
+
+
+.pull-left[
+&lt;br&gt;
+&lt;br&gt;
+
+* Simplest approach: include a dummy variable for each `\(i\)`. 
+
+* This is literally *controlling for county* i
+
+* Each `\(i\)` has basically their own intercept `\(c_i\)`
+
+* In `R` you achieve this like so:
+
+]
+
+.pull-right[
+&lt;br&gt;
+&lt;br&gt;
+`$$y_{it} = \beta_1 x_{it} + c_i + u_{it},\quad t=1,2,...T$$`
+
+
+```r
+mod = list()
+mod$dummy &lt;- lm(crmrte ~ prbarr + factor(county), css)  # i is the unit ID
+broom::tidy(mod$dummy)
+```
+
+```
+## # A tibble: 5 x 5
+##   term              estimate std.error statistic  p.value
+##   &lt;chr&gt;                &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;    &lt;dbl&gt;
+## 1 (Intercept)        0.0449    0.00456      9.87 9.85e-10
+## 2 prbarr            -0.0284    0.0136      -2.08 4.86e- 2
+## 3 factor(county)3   -0.0250    0.00254     -9.82 1.07e- 9
+## 4 factor(county)23  -0.00850   0.00166     -5.13 3.41e- 5
+## 5 factor(county)145 -0.00650   0.00160     -4.07 4.70e- 4
+```
+
+]
+
+---
+
+# Dummy Variable Regression
+
+.left-wide[
+&lt;img src="06-panel_files/figure-html/dummy-1.svg" style="display: block; margin: auto;" /&gt;
+]
+
+.right-thin[
+* *Within* each county, now is a **negative** relationship!! 
+
+* Different intercepts (county 1 is be the reference group), 
+
+* Unique slope coefficient `\(\beta\)`. (you observe that the lines are parallel).
+
+* We are shifting lines down from the reference group 1.
+]
+
+---
+
+# First Differencing Solution
+
+If we only had `\(T=2\)` periods, we could just difference both periods, basically leaving us with
+    
+`$$\begin{align}y_{i1} &amp;= \beta_1 x_{i1} + c_i + u_{i1} \\y_{i2} &amp;= \beta_1 x_{i2} + c_i + u_{i2} \\&amp; \Rightarrow \\
+y_{i1}-y_{i2} &amp;= \beta_1 (x_{i1} - x_{i2}) + c_i-c_i + u_{i1}-u_{i2} \\\Delta y_{i} &amp;= \beta_1 \Delta x_{i} + \Delta u_{i}\end{align}$$`
+
+where `\(\Delta\)` means *difference over time of* and to recover the parameter of interest `\(\beta_1\)` we would run
+
+
+```r
+lm(deltay ~ deltax, diff_data) 
+```
+    
+    
+    
+---
+
+
+# The Within Transformation
+
+.pull-left[
+* With `\(T&gt;2\)` we need a different approach
+
+* One important concept is called the *within* transformation
+
+* So, *controlling for group identity and only looking at time variation* 
+
+* Remember DAG!
+
+]
+
+.pull-right[
+
+* Let `\(\bar{x}_i\)` the average *over time* of `\(i\)`'s `\(x\)` values:
+
+`$$\bar{x}_i = \frac{1}{T} \sum_{t=1}^T x_{it}$$`
+
+1. for all variables compute their time-mean for each unit `\(i\)`: `\(\bar{x}_i,\bar{y}_i\)` etc
+1. for each observation, substract that time mean from the actual value and define `\((x_{it} - \bar{x}_i),(y_{it}-\bar{y}_i)\)`
+1. Finally, regress `\((x_{it} - \bar{x}_i)\)` on `\((y_{it}-\bar{y}_i)\)`
+
+]
+
+---
+
+# The Within Transformation in `R`: Manual Solution
+
+This *works* for our problem with fixed effect `\(c_i\)` because `\(c_i\)` is not time varying by assumption! hence it drops out: 
+
+`$$y_{it}-\bar{y}_i = \beta_1 (x_{it} - \bar{x}_i) + c_i - c_i + u_{it}-\bar{u}_i$$`
+
+
+It's easy to do yourself! First let's compute the demeaned values:
+
+
+```r
+cdata &lt;- css %&gt;%
+  group_by(county) %&gt;%
+  mutate(mean_crime = mean(crmrte),
+         mean_prob = mean(prbarr)) %&gt;%
+  mutate(demeaned_crime = crmrte - mean_crime,
+         demeaned_prob = prbarr - mean_prob)
+```
+
+Then, run both models with simple OLS:
+
+
+```r
+mod$xsect &lt;- lm(crmrte ~ prbarr, data = cdata)
+mod$demeaned &lt;- lm(demeaned_crime ~ demeaned_prob, data = cdata)
+```
+
+---
+
+# The Within Transformation in `R`: Manual Solution
+
+
+.left-wide[
+We get this table:
+
+<table class="huxtable" style="border-collapse: collapse; border: 0px; margin-bottom: 2em; margin-top: 2em; ; margin-left: auto; margin-right: auto;  " id="tab:tab1">
+<col><col><col><col><tr>
+<th style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 1pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;"> </th><th style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 1pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;">xsect</th><th style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 1pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;">dummy</th><th style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 1pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;">demeaned</th></tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 0pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;">(Intercept)</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 0pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;">0.009</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 0pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;">0.045</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 0pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;">0.000</td></tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 6pt 6pt 6pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 6pt 6pt 6pt 6pt; font-weight: normal;">(0.005)</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 6pt 6pt 6pt 6pt; font-weight: normal;">(0.005)</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 6pt 6pt 6pt 6pt; font-weight: normal;">(0.001)</td></tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 6pt 6pt 6pt 6pt; font-weight: normal;">prbarr</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 6pt 6pt 6pt 6pt; font-weight: normal;">0.065</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 6pt 6pt 6pt 6pt; font-weight: normal;"><span style="color: rgb(255, 0, 0);">-0.028</span></td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 6pt 6pt 6pt 6pt; font-weight: normal;"><span style="color: rgb(255, 0, 0);"></span></td></tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 6pt 6pt 6pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 6pt 6pt 6pt 6pt; font-weight: normal;">(0.016)</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 6pt 6pt 6pt 6pt; font-weight: normal;">(0.014)</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 6pt 6pt 6pt 6pt; font-weight: normal;"></td></tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 6pt 6pt 6pt 6pt; font-weight: normal;">demeaned_prob</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 6pt 6pt 6pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 6pt 6pt 6pt 6pt; font-weight: normal;"><span style="color: rgb(255, 0, 0);"></span></td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 6pt 6pt 6pt 6pt; font-weight: normal;"><span style="color: rgb(255, 0, 0);">-0.028</span></td></tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 1pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 1pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 1pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 1pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;">(0.013)</td></tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 1pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;">R2</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 1pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;">0.390</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 1pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;">0.893</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 1pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;">0.159</td></tr>
+</table>
+
+]
+
+.left-thin[
+
+* Estimate for `prbarr` is positive in the cross-section
+
+* Taking care of the unobservered heterogeneity `\(c_i\)`...
+
+* ...either by including an intercept for each `\(i\)` or by time-demeaning the data
+
+* we obtain: -0.028 .
+
+]
+
+---
+
+# Interpreting the Within Estimates
+
+
+
+
+* How to interpret those negative slopes?
+
+* We look at a single unit `\(i\)` and ask: 
+
+&gt; if the arrest probability in `\(i\)` increases by 10 percentage points (i.e. from 0.2 to 0.3) from year `\(t\)` to `\(t+1\)`, we expect crimes per person to fall from 0.039 to 0.036, or by -7.69 percent (in the reference county number 1).
+
+&lt;img src="06-panel_files/figure-html/unnamed-chunk-15-1.svg" style="display: block; margin: auto;" /&gt;
+
+
+---
+
+# Fixed Effects Estimation in `R`: use a Package!
+
+
+* In real life you will hardly ever perform the within-transformation by yourself 
+
+* and use a package instead!
+
+* There are several options ([`fixest` is fastest](https://github.com/lrberge/fixest)). In our context:
+
+
+```r
+mod$FE = fixest::feols(crmrte ~ prbarr | county, cdata)
+```
+
+* Notice the similar setup to the `estimatr::iv_robust` *two-part formula*. Here the fixed effects come after the `|`. 
+
+* Also, we can have *more than one fixed effect*! For a cool example with *three* fixed effects see the package [vignette](https://cran.r-project.org/web/packages/fixest/vignettes/fixest_walkthrough.html)
+
+---
+
+# Fixed Effects Estimation in `R`: use `fixest` 🙂
+
+.left-wide[
+<table class="huxtable" style="border-collapse: collapse; border: 0px; margin-bottom: 2em; margin-top: 2em; ; margin-left: auto; margin-right: auto;  " id="tab:unnamed-chunk-17">
+<col><col><col><col><col><tr>
+<th style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 1pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;"> </th><th style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 1pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;">xsect</th><th style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 1pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;">dummy</th><th style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 1pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;">demeaned</th><th style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 1pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;">FE</th></tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 0pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;">(Intercept)</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 0pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;">0.009</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 0pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;">0.045</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 0pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;">0.000</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 0pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;"></td></tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 6pt 6pt 6pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 6pt 6pt 6pt 6pt; font-weight: normal;">(0.005)</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 6pt 6pt 6pt 6pt; font-weight: normal;">(0.005)</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 6pt 6pt 6pt 6pt; font-weight: normal;">(0.001)</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 6pt 6pt 6pt 6pt; font-weight: normal;"></td></tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 6pt 6pt 6pt 6pt; font-weight: normal;">prbarr</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 6pt 6pt 6pt 6pt; font-weight: normal;">0.065</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 6pt 6pt 6pt 6pt; font-weight: normal;"><span style="color: rgb(255, 0, 0);">-0.028</span></td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 6pt 6pt 6pt 6pt; font-weight: normal;"><span style="color: rgb(255, 0, 0);"></span></td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 6pt 6pt 6pt 6pt; font-weight: normal;"><span style="color: rgb(255, 0, 0);">-0.028</span></td></tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 6pt 6pt 6pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 6pt 6pt 6pt 6pt; font-weight: normal;">(0.016)</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 6pt 6pt 6pt 6pt; font-weight: normal;">(0.014)</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 6pt 6pt 6pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 6pt 6pt 6pt 6pt; font-weight: normal;">(0.005)</td></tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 6pt 6pt 6pt 6pt; font-weight: normal;">demeaned_prob</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 6pt 6pt 6pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 6pt 6pt 6pt 6pt; font-weight: normal;"><span style="color: rgb(255, 0, 0);"></span></td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 6pt 6pt 6pt 6pt; font-weight: normal;"><span style="color: rgb(255, 0, 0);">-0.028</span></td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 6pt 6pt 6pt 6pt; font-weight: normal;"><span style="color: rgb(255, 0, 0);"></span></td></tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 1pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 1pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 1pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 1pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;">(0.013)</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 1pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;"></td></tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 0pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;">R2</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 0pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;">0.390</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 0pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;">0.893</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 0pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;">0.159</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 0pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;">0.893</td></tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: normal; padding: 6pt 6pt 6pt 6pt; font-weight: normal;">FE: county</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 6pt 6pt 6pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 6pt 6pt 6pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 6pt 6pt 6pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 6pt 6pt 6pt 6pt; font-weight: normal;">X</td></tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 1pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;">Std. errors</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 1pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 1pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 1pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 1pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;">Clustered (county)</td></tr>
+</table>
+
+]
+
+.right-thin[
+&lt;br&gt;
+
+* Same estimates! 😅
+
+* Notice the standard errors: *robust*?!
+
+* `fixest` computes **cluster-robust** se's. 
+
+* We suspect there is strong correlation in residuals *within* each county (over time).
+
+]
+
+
+---
+
+# Within Transformation Animated
+
+.left-wide[
+
+&lt;img src="../../img/gifs/panel.gif" style="display: block; margin: auto;" /&gt;
+]
+
+.right-thin[
+
+* The within transformation **centers** the data!
+
+* By time-demeaning `\(y\)` and `\(x\)`, we *project out* the fixed factors related to *county*
+
+* Only *within* county variation is left.
+
+* Made by [Nick C Huntington-Klein](http://nickchk.com).  🙏
+
+]
+---
+
+class: title-slide-final, middle
+background-image: url(../../img/logo/ScPo-econ.png)
+background-size: 250px
+background-position: 9% 19%
+
+# END
+
+
+
+
+|                                                                                                            |                                   |
+| :--------------------------------------------------------------------------------------------------------- | :-------------------------------- |
+| &lt;a href="mailto:florian.oswald@sciencespo.fr"&gt;.ScPored[&lt;i class="fa fa-paper-plane fa-fw"&gt;&lt;/i&gt;]               | florian.oswald@sciencespo.fr       |
+| &lt;a href="https://github.com/ScPoEcon/Advanced-Metrics-slides"&gt;.ScPored[&lt;i class="fa fa-link fa-fw"&gt;&lt;/i&gt;] | Slides |
+| &lt;a href="https://scpoecon.github.io/ScPoEconometrics"&gt;.ScPored[&lt;i class="fa fa-link fa-fw"&gt;&lt;/i&gt;] | Book |
+| &lt;a href="http://twitter.com/ScPoEcon"&gt;.ScPored[&lt;i class="fa fa-twitter fa-fw"&gt;&lt;/i&gt;]                          | @ScPoEcon                         |
+| &lt;a href="http://github.com/ScPoEcon"&gt;.ScPored[&lt;i class="fa fa-github fa-fw"&gt;&lt;/i&gt;]                          | @ScPoEcon                       |
+
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script src="../../js/ru_xaringan.js"></script>
+<script>var slideshow = remark.create({
+"highlightStyle": "github",
+"highlightLines": true,
+"countIncrementalSlides": false,
+"ratio": "16:9"
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>

@@ -8,19 +8,17 @@
 
 Lecture 1: Introduction, Logistics and Recap 1 from intro course [[HTML](https://raw.githack.com/ScPoEcon/Advanced-Metrics-slides/master/lectures/01-recap/recap1.html)]
 
-Lecture 2: Recap 2 from intro course [[HTML](https://raw.githack.com/ScPoEcon/Advanced-Metrics-slides/master/lectures/02-recap/recap2.html)] + intro to data.table [[HTML](https://raw.githack.com/ScPoEcon/Advanced-Metrics-slides/master/lectures/03-datatable/03-datatable.html)]
+Lecture 2: Recap 2 from intro course [[HTML](https://raw.githack.com/ScPoEcon/Advanced-Metrics-slides/master/lectures/02-recap/recap2.html)] +
 
-Session 3: Instrumental Variables and Causality 1 [[HTML](https://raw.githack.com/ScPoEcon/Advanced-Metrics-slides/master/lectures/04-IV/04-IV.html)]
+Session 3: intro to data.table [[HTML](https://raw.githack.com/ScPoEcon/Advanced-Metrics-slides/master/lectures/03-datatable/03-datatable.html)]
 
-Session 4: Instrumental Variables and Causality 2 [[HTML](https://raw.githack.com/ScPoEcon/Advanced-Metrics-slides/master/lectures/05-IV2/05-IV2.html)]
+Session 4: Instrumental Variables and Causality 1 [[HTML](https://raw.githack.com/ScPoEcon/Advanced-Metrics-slides/master/lectures/04-IV/04-IV.html)]
 
-Session 5: Instrumental Variables and Causality 3
+Session 5: Instrumental Variables and Causality 2 [[HTML](https://raw.githack.com/ScPoEcon/Advanced-Metrics-slides/master/lectures/05-IV2/05-IV2.html)]
 
-Session 6: Panel Data 1: What, How and Why?
+Session 6: Panel Data 1: What, How and Why? [[HTML](https://raw.githack.com/ScPoEcon/Advanced-Metrics-slides/master/lectures/06-panel/06-panel.html)]
 
-Session 6: Panel Data 2: Applications and Methods
-
-Session 7: Discrete Outcomes: Logit and Probit 1
+Session 7: Discrete Outcomes: Logit and Probit
 
 Session 8: Discrete Outcomes: Logit and Probit 2
 
