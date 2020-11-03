@@ -83,7 +83,7 @@ class: separator, middle
 ---
 layout: true
 
-<div class="my-footer"><img src="../img/logo/ScPo-shield.png" style="height: 60px;"/></div> 
+<div class="my-footer"><img src="../../img/logo/ScPo-shield.png" style="height: 60px;"/></div> 
 
 ---
 
@@ -94,7 +94,7 @@ layout: true
 
 
 class: title-slide-final, middle
-background-image: url(../img/logo/ScPo-econ.png)
+background-image: url(../../img/logo/ScPo-econ.png)
 background-size: 250px
 background-position: 9% 19%
 

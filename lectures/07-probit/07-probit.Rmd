@@ -1,0 +1,601 @@
+---
+title: "ScPoEconometrics: Advanced"
+subtitle: "Binary Response Models"
+author: "Florian Oswald"
+date: "SciencesPo Paris </br> `r Sys.Date()`"
+output:
+  xaringan::moon_reader:
+    lib_dir: libs
+    css: [default, "../../css/scpo.css", "../../css/scpo-fonts.css"]
+    nature:
+      beforeInit: ["../../js/ru_xaringan.js"]
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+      ratio: "16:9"
+    includes:
+      in_header: ["../../libs/partials/header.html"]
+---
+
+layout: true
+
+<div class="my-footer"><img src="../../img/logo/ScPo-shield.png" style="height: 60px;"/></div> 
+
+---
+
+```{r setup, include=FALSE,warning=FALSE,message=FALSE}
+options(htmltools.dir.version = FALSE)
+knitr::opts_chunk$set(
+  message = FALSE,
+  warning = FALSE,
+  dev = "svg",
+  cache = TRUE,
+  fig.align = "center"
+  #fig.width = 11,
+  #fig.height = 5
+)
+
+# define vars
+om = par("mar")
+lowtop = c(om[1],om[2],0.1,om[4])
+library(magrittr)
+
+```
+
+# Where Are We At?
+
+.pull-left[
+
+**Last Time**
+
+* Panel Data Estimation
+
+* The *fixed effects estimator*
+
+* `fixest` package
+
+]
+
+--
+
+.pull-right[
+**Today**
+
+1. Binary Response Models!
+
+2. Another cool app! 😎
+
+]
+
+
+---
+class: separator, middle
+
+# Binary Response Models
+
+---
+
+# Binary Response Models
+
+.pull-left[
+
+So far, our models looked like this:
+
+$$\begin{align}
+y &= b_0 + b_1 + e \\
+e &\sim N\left(0,\sigma^2\right)
+\end{align}$$
+
+* The distributional assumption on $e$: 
+
+* In priniciple implies that $y \in \mathbb{R}$.
+
+* test scores, earnings, crime rates etc are all continuous outcomes. ✅
+
+]
+
+--
+
+.pull-right[
+
+But some outcomes are clearly binary (i.e. either `TRUE` or `FALSE`):
+
+* You either work or you don't,
+
+* You either have children or you don't,
+
+* You either bought a product or you didn't,
+
+* You flipped a coin and it came up either heads or tails.
+
+]
+
+---
+
+# Binary Outcomes
+
+* Outcomes restricted to `FALSE` vs `TRUE`, or `0` vs `1`. 
+
+* We'd have $y \in  \{0,1\}$. 
+
+* In those situations we are primarily interested in estimating the **response probability** or the **probability of success**:
+
+$$p(x) = \Pr(y=1 | x)$$
+* how does $p(x)$ change as we change $x$?
+
+* we ask 
+    >If we increase $x$ by one unit, how would the probability of $y=1$ change?
+
+---
+
+# Remembering Bernoulli Fun
+
+.pull-left[
+Remember the [Bernoulli Distribution?](https://en.wikipedia.org/wiki/Bernoulli_distribution): We call a random variable $y \in \{0,1\}$ such that
+
+$$\begin{align}
+\Pr(y = 1) &= p \\
+\Pr(y = 0) &= 1-p \\
+p &\in[0,1]
+\end{align}$$
+
+a *Bernoulli* random variable. 
+]
+
+--
+
+.pull-right[
+For us: *condition* those probabilities on a covariate $x$
+
+$$\begin{align}
+\Pr(y = 1 | X = x) &= p(x) \\
+\Pr(y = 0 | X = x) &= 1-p(x) \\
+p(x) &\in[0,1]
+\end{align}$$
+
+* Partcularly: *expected value* (i.e. the average) of $Y$ given $x$
+
+$$
+E[y | x] = p(x) \times 1 + (1-p(x)) \times 0 = p(x)
+$$
+
+* We often model **conditional expectations** 😉
+]
+
+---
+
+# The Linear Probability Model (LPM)
+
+* The simplest option. Model the response probability as
+
+$$
+\Pr(y = 1 | x) = p(x) = \beta_0 + \beta_1 x_1 + \dots + \beta_K x_K
+$$
+* Interpretation: *a 1 unit change in $x_1$, say, results in a change of $p(x)$ of $\beta_1$.*
+
+## Example: Mroz (1987)
+
+* Female labor market participation
+
+* How does `inlf` (*in labor force*) status depend on non-wife household income, her education, age and number of small children?
+
+
+---
+
+# Mroz 1987
+
+```{r,fig.height = 4}
+data(mroz, package = "wooldridge")
+plot(factor(inlf) ~ age, data = mroz, 
+     ylevels = 2:1,
+     ylab = "in labor force?")
+```
+
+---
+class: inverse
+
+# Task 1 (5 Minutes)
+
+1. What is the unit of observation in this data set?
+
+1. How many rows and columns of data do we have?
+
+1. What is the unconditional probability of being in the labor force?
+
+1. What is the unconditional mean of being in the labor force?
+
+1. What is the conditional probability of being in the labor force conditional on the number of kids less than 6 years old?
+
+
+---
+
+# Running the LPM
+
+.pull-left[
+```{r}
+LPM = lm(inlf ~ nwifeinc + educ + exper 
+         + I(exper^2) + age +I(age^2) + kidslt6, mroz)
+broom::tidy(LPM)
+```
+]
+
+.pull-right[
+* **identical** to our previous linear regression models
+
+* Just `inlf` takes on only two values, 0 or 1. 
+
+* Results: non-wife income increases by 10 (i.e 10,000 USD), $p(x)$ falls by 0.034 (that's a small effect!), 
+
+* an additional small child would reduce the probability of work by 0.26 (that's large). 
+
+* So far, so simple. ✌️
+]
+
+---
+
+# LPM: Predicting negative probabilities?!
+
+
+.pull-left[
+```{r,echo = FALSE}
+pr = predict(LPM)
+plot(pr[order(pr)],ylab = "p(inlf = 1)")
+abline(a = 0, b = 0, col = "red",lw = 3)
+abline(a = 1, b = 0, col = "red",lw = 3)
+```
+]
+
+.pull-right[
+<br>
+<br>
+* LPM predictions of $p(x)$ are not guaranteed to lie in unit interval $[0,1]$. 
+
+* Remember: $e \sim N\left(0,\sigma^2\right)$
+
+* here, some probs smaller than zero!
+
+* Particularly annoying if you want *predictions*: What is a probability of -0.3? 🤔
+]
+
+---
+
+# LPM in Saturated Model: No Problem!
+
+.left-wide[
+```{r,message=FALSE,warning=FALSE}
+library(dplyr)
+mroz %<>% 
+  # classify age into 3 and huswage into 2 classes
+  mutate(age_fct = cut(age,breaks = 3,labels = FALSE),
+         huswage_fct = cut(huswage, breaks = 2,labels = FALSE)) %>%
+  mutate(classes = paste0("age_",age_fct,"_hus_",huswage_fct))
+
+LPM_saturated = mroz %>%
+  lm(inlf ~ classes, data = .)
+broom::tidy(LPM_saturated)
+```
+
+]
+
+.right-thin[
+* *saturated model* : only have dummy explanatory variables 
+
+* Each class: $p(x)$ *within that cell*. 
+
+
+]
+
+---
+
+# LPM in Saturated Model: No Problem!
+
+.left-wide[
+```{r saturated,message=FALSE,warning=FALSE,fig.height = 5,echo = FALSE}
+library(ggplot2)
+mroz$pred <- predict(LPM_saturated)
+
+ggplot(mroz[order(mroz$pred),], aes(x = 1:nrow(mroz),y = pred,color = classes)) + 
+  geom_point() + 
+  theme_bw() + 
+  scale_y_continuous(limits = c(0,1), name = "p(inlf)")
+```
+]
+
+.right-thin[
+
+* Each line segment: $p(x)$ *within that cell*. 
+
+* E.g. women from the youngest age category and lowest husband income (class `age_1_hus_1`) have the highest probability of working (`r round(max(mroz$pred),3)`).
+
+]
+
+
+---
+class: inverse
+
+# Task 2 (10 Minutes): Saturated LPM
+
+Define a *saturated* LPM as before
+
+$$
+\Pr(y = 1 | x) = p(x) = \beta_0 + \beta_1 x_1 + \dots + \beta_K x_K
+$$
+but restrict all $x_j \in \{0,1\}$.
+
+1. Create a binary indicator `age_lt_50 = 1` for age smaller than 50 and `0` else and same for `husage_lt_50`. 
+
+1. Run a full interactions model (use the `*` syntax in your formula) of `age_lt_50 = 1` interacted with `husage_lt_50`. I.e. run the following LPM: 
+$$
+\Pr(y = 1 | x) =\beta_0 + \beta_1 \text{age_lt_50} + \beta_2 \text{husage_lt_50} + \beta_3 \times \text{age_lt_50} \times \text{husage_lt_50}
+$$
+
+1. `predict` $\Pr(y = 1 | x)$ for each observation using your LPM.
+
+1. What's the probability for a woman younger than 50 with a husband younger than 50?
+
+1. make a plot similar to the one on the previous slide.
+
+---
+
+# Nonlinear Binary Response Models
+
+In this class of models we change the way we model the response probability $p(x)$. Instead of the simple linear structure from above, we write
+
+$$
+\Pr(y = 1 | x) = p(x) = G \left(\beta_0 + \beta_1 x_1 + \dots + \beta_K x_K \right)
+$$
+* *almost* identical to LPM!
+
+* except the *linear index* $\beta_0 + \beta_1 x_1 + \dots + \beta_K x_K$ is now inside some function $G(\cdot)$. 
+
+* Main property of $G$: transforms any $z\in \mathbb{R}$ into a number in the interval $(0,1)$. 
+
+* This immediately solves our problem of getting weird predictions for probabilities.
+
+---
+
+# $G$: **probit** and **logit**
+
+.left-wide[
+```{r cdfs,echo = FALSE,fig.height = 5}
+ggplot(data.frame(x = c(-5,5)), aes(x=x)) + 
+  stat_function(fun = pnorm, aes(colour = "Probit"), size = 1) + 
+  stat_function(fun = plogis, aes(colour = "Logit"), size = 1) + 
+  theme_bw() + 
+  scale_colour_manual(name = "Function G",values = c("red", "blue")) +
+  scale_y_continuous(name = "Pr(y = 1 | x)")
+```
+]
+
+.right-thin[
+
+<br>
+For both **probit** and **logit** we see that:
+
+1. any value $x$ results in a value $p(x)$ between 0 and 1
+
+1. the higher $x$, the higher the resulting $p(x)$.
+
+1. Logit has *fatter tails* than Probit.
+
+]
+
+---
+
+# Running probit and logit in `R`: the `glm` function
+
+* We use the `glm` function to run a **generalized linear model**
+
+* This *generalizes* our standard linear model. We have to specify a `family` and a `link`:
+
+```{r}
+probit <- glm(inlf ~ age, 
+                    data = mroz, 
+                    family = binomial(link = "probit"))
+
+logit <- glm(inlf ~ age, 
+                    data = mroz, 
+                    family = binomial(link = "logit"))
+
+```
+
+---
+
+# Interpretation
+
+.pull-left[
+```{r}
+modelsummary::modelsummary(list("probit" = probit,"logit" = logit))
+```
+]
+
+.pull-right[
+* probit coefficient for `age` is `r round(coef(probit)[2],3)` 
+
+* logit: `r round(coef(logit)[2],3)` for logit, 
+
+* impact of age on the prob of working is **negative**
+
+* However, **how** negative? We can't tell!
+]
+
+---
+
+# Interpretation
+
+The model is
+
+$$
+\Pr(y = 1 | \text{age})= G \left(x \beta\right) = G \left(\beta_0 + \beta_1 \text{age} \right) 
+$$
+and the *marginal effect* of `age` on the response probability is
+
+$$\frac{\partial{\Pr(y = 1 | \text{age})}}{ \partial{\text{age}}} = g \left(\beta_0 + \beta_1 \text{age} \right) \beta_1$$
+
+* function $g$ is defined as $g(z) = \frac{dG}{dz}(z)$ - the first derivative function of $G$ (i.e. the *slope* of $G$). 
+
+* given $G$ that is nonlinear, this means that $g$ will be non-constant. You are able to try this out yourself using this app:
+
+```{r, eval = FALSE}
+ScPoApps::launchApp("marginal_effects_of_logit_probit")
+```
+
+---
+
+# Interpretation
+
+So you can see that there is not one single *marginal effect* in those models, as that depends on *where we evaluate* the previous expression. In practice, there are two common approaches:
+
+1. report effect at the average values of $x$:             $$g(\bar{x} \beta) \beta_j$$
+
+1. report the sample average of all marginal effects: $$\frac{1}{n} \sum_{i=1}^N g(x_i \beta) \beta_j$$
+
+Thankfully there are packages available that help us to compute those marginal effects fairly easily. One of them is called [`mfx`](https://cran.r-project.org/web/packages/mfx/), and we would use it as follows:
+
+---
+
+# Interpretation
+
+```{r glms}
+f <- "inlf ~ age + kidslt6 + nwifeinc" # setup a formula
+glms <- list()
+glms$probit <- glm(formula = f, 
+                    data = mroz, 
+                    family = binomial(link = "probit"))
+glms$logit <- glm(formula = f, 
+                    data = mroz, 
+                    family = binomial(link = "logit"))
+# now the marginal effects versions
+glms$probitMean <- mfx::probitmfx(formula = f, 
+                    data = mroz, atmean = TRUE)
+glms$probitAvg <- mfx::probitmfx(formula = f, 
+                    data = mroz, atmean = FALSE)
+glms$logitMean <- mfx::logitmfx(formula = f, 
+                    data = mroz, atmean = TRUE)
+glms$logitAvg <- mfx::logitmfx(formula = f, 
+                    data = mroz, atmean = FALSE)
+
+```
+
+
+---
+
+# Interpretation
+
+```{r,echo = FALSE}
+
+modelsummary::modelsummary(glms, 
+                           stars = TRUE,
+                           gof_omit = "AIC|BIC")
+```
+
+---
+class: separator, middle
+
+
+# Goodness of Fit in Binary Models
+
+---
+
+# GOF in Binary Models
+
+* There is no universally accepted $R^2$ for binary models.
+
+* We can think of a *pseudo* $R^2$ which compares our model to one without any regressors:
+
+```{r}
+glms$probit0 <- update(glms$probit, formula = . ~ 1)  # intercept model only
+1 - as.vector(logLik(glms$probit)/logLik(glms$probit0))
+```
+
+--
+
+* But that's not super informative (unlike the standard $R^2$). Changes in likelihood value are highly non-linear, so that's not great.
+
+* Let's check **accuracy** - what's the proportion correctly predicted! `round(fitted(x))` assigns `1` if the predicted prob $> 0.5$.
+
+```{r}
+prop.table(table(true = mroz$inlf, pred = round(fitted(glms$probit))))
+```
+
+---
+
+# GOF in Binary Models: ROC Curves
+
+* The 0.5 cutuff is arbitrary. What if all predicted probs are $> 0.5$ but in the data there are about 50% of zeros? 
+
+* Let's choose an *arbitrary cutoff* $c \in (0,1)$ and check accuracy for each value. This gives a better overview.
+
+--
+
+* Also, we can confront the **true positives rate** (TPR) with the **false positives rate** (FPR). 
+    1. TPR: number of women correctly predicted to work divided by num of working women.
+    2. FPR: number of women incorrectly predicted to work divided by num of non-working women.
+    
+--
+    
+* Plotting FPR vs TPR for each $c$ defines the **ROC** (Receiver Operating Characteristics) Curve.
+
+* A good model has a ROC curve in the upper left corner: FPR = 0, TPR = 1.
+
+---
+
+# GOF in Binary Models: ROC Curves
+
+.left-wide[
+```{r,fig.height = 3}
+library(ROCR)
+pred <- prediction(fitted(glms$probit), mroz$inlf)
+par(mfrow = c(1,2), mar = lowtop)
+plot(performance(pred,"acc"))
+plot(performance(pred,"tpr","fpr"))
+abline(0,1,lty = 2, col = "red")
+```
+]
+
+.right-thin[
+<br>
+<br>
+* Best accuracy at around $c=0.6$
+
+* ROC always above 45 deg line. Better than random assignment (flipping a coin)! Yeah!
+
+]
+
+---
+class: inverse
+
+# Task 3 (10 Minutes): `SwissLabor`
+
+1. Load the `SwissLabor` Dataset from the `AER` package with `data(SwissLabor, package = "AER")`
+
+1. `skim` the data to get a quick overview. How many foreigners are in the data?
+
+1. Run a probit model of `participation` on all other variables plus age squared. Which age has the largest impact on participation? 
+
+1. What is the marginal effect at the mean of all $x$ of being a foreigner on participation?
+
+1. Produce a ROC curve of this probit model and discuss it!
+
+
+
+---
+
+class: title-slide-final, middle
+background-image: url(../../img/logo/ScPo-econ.png)
+background-size: 250px
+background-position: 9% 19%
+
+# END
+
+
+
+
+|                                                                                                            |                                   |
+| :--------------------------------------------------------------------------------------------------------- | :-------------------------------- |
+| <a href="mailto:florian.oswald@sciencespo.fr">.ScPored[<i class="fa fa-paper-plane fa-fw"></i>]               | florian.oswald@sciencespo.fr       |
+| <a href="https://github.com/ScPoEcon/Advanced-Metrics-slides">.ScPored[<i class="fa fa-link fa-fw"></i>] | Slides |
+| <a href="https://scpoecon.github.io/ScPoEconometrics">.ScPored[<i class="fa fa-link fa-fw"></i>] | Book |
+| <a href="http://twitter.com/ScPoEcon">.ScPored[<i class="fa fa-twitter fa-fw"></i>]                          | @ScPoEcon                         |
+| <a href="http://github.com/ScPoEcon">.ScPored[<i class="fa fa-github fa-fw"></i>]                          | @ScPoEcon                       |
+
