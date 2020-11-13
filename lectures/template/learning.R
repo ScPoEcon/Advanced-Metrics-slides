@@ -1,12 +1,71 @@
 rm(list=ls())
 library(ggplot2)
 library(splines)
+library(dplyr)
 # 
 # tfun <- function(x) {
 #     x + 0.1 * x^2 - 0.002 * x^3 + 0.00001 *x^4
 # }
 
 # sin(x-2) + x-0.05*x^2
+
+getmodels <- function(x,y,newx,dfs = 2:20){
+    r = data.frame(x=x,y=y)
+    o = data.frame(x=newx)
+    s = list()
+    # browser()
+    for (i in 1:length(dfs)){
+        if (dfs[i] == 2){
+            s[[i]] <- lm(y~x,r)
+            o = cbind(o, predict(s[[i]], newdata = o))
+        } else {
+            s[[i]] <- smooth.spline(x,y,df = dfs[i])
+            o = cbind(o, predict(s[[i]], o$x)$y)
+        }
+    }
+    names(o)[-c(1)] <- paste0("df",dfs)
+    names(s) <- paste0("df",dfs)
+    list(models = s, pred = o)
+}
+
+datafig2.12 <- function(fun = function(x) {x*sin(x-2) + 0.2*x},n=90,eps = 1,df1=5, df2=40, ub = 5,nnew = 200){
+    set.seed(1234)
+    
+    r = data.frame(x = seq(0,ub,length.out = n))
+    r$truth = fun(r$x) 
+    r$epsi = rnorm(n,mean = 0, sd = eps)
+    r$y = r$truth + r$epsi
+    # browser()
+
+    mods = getmodels(r$x,r$y,seq(0,ub, length.out = nnew))
+    # add test data to predictions
+    mods$pred$truth = fun(mods$pred$x)
+    mods$pred$testdata = mods$pred$truth + rnorm(nnew,mean = 0, sd = eps)
+    # mses and bias
+    mses = list(
+        train = colMeans(sapply(mods$models,residuals)^2)
+    ) # test mses
+    mses$test <- colMeans((mods$pred[,names(mods$models)] - mods$pred[,"testdata"])^2)
+    
+    # bias
+    mses$bias <- colMeans((mods$pred[,names(mods$models)] - mods$pred[,"truth"])^2)
+    mses$var <- diag(var(mods$pred[,names(mods$models)]))
+    list(mods,mses)
+    
+}
+x = datafig2.12()
+
+plotfig2.12 <- function(d) {
+    stopifnot(is.list(d))
+    m = data.frame(d)
+    m$x = 2:(nrow(m)+1)
+    m = reshape2::melt(m,id.vars = "x")
+    m %>% 
+        rename(model = variable) %>%
+        ggplot(aes(x=x,y = value, color = model)) + geom_point()
+        
+}
+plot(plotfig2.12(x[[2]]))
 
 smes1 <- function(fun = function(x) {x*sin(x-2) + 0.2*x},n=90,eps = 1,df1=5, df2=40, ub = 5,nnew = 200){
     set.seed(1234)
@@ -28,7 +87,7 @@ smes1 <- function(fun = function(x) {x*sin(x-2) + 0.2*x},n=90,eps = 1,df1=5, df2
     names(mods)[2:3] <- paste0("s",c(df1,df2))
     
     
-    # mses
+    # mses and bias
     mses = list(
         train = colMeans(sapply(mods,residuals)^2)
     )
@@ -44,6 +103,10 @@ smes1 <- function(fun = function(x) {x*sin(x-2) + 0.2*x},n=90,eps = 1,df1=5, df2
     # test mses
     mses$test <- colMeans((preds[,names(mods)] - preds[,"testdata"])^2)
     
+    # bias
+    mses$bias <- colMeans((preds[,names(mods)] - preds[,"truth"])^2)
+    mses$var <- diag(var(preds[,names(mods)]))
+
     mp = reshape2::melt(preds[,-ncol(preds)], id.vars = "x")
     names(mp)[2] <- "model" 
     
@@ -137,7 +200,13 @@ smes2 <- function(fun = function(x) {x*sin(x-2) + 0.2*x},n=90,eps = 1,df1=5, df2
     # list(p1,p2)
 }
 
-print(smes1())
+# running
+# figure 2.9
+# print(smes1())
+# figure 2.10
+# print(smes1(fun = function(x){x^1.2}))
+# figure 2.11
+# print(smes1(fun = function(x){4*x*sin(x) - 0.5*x^2}))
 
 # 
 # z <- simdata()
