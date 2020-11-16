@@ -18,7 +18,7 @@ Session 5: Instrumental Variables and Causality 2 [[HTML](https://raw.githack.co
 
 Session 6: Panel Data 1: What, How and Why? [[HTML](https://raw.githack.com/ScPoEcon/Advanced-Metrics-slides/master/lectures/06-panel/06-panel.html)]
 
-Session 7: Discrete Outcomes: Logit and Probit [[HTML](https://raw.githack.com/ScPoEcon/Advanced-Metrics-slides/master/lectures/07-probit/07-probit.html]
+Session 7: Discrete Outcomes: Logit and Probit [[HTML](https://raw.githack.com/ScPoEcon/Advanced-Metrics-slides/master/lectures/07-probit/07-probit.html)]
 
 Session 8: Discrete Outcomes: Logit and Probit 2
 
