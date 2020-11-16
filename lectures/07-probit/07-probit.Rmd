@@ -434,11 +434,13 @@ $$\frac{\partial{\Pr(y = 1 | \text{age})}}{ \partial{\text{age}}} = g \left(\bet
 
 * function $g$ is defined as $g(z) = \frac{dG}{dz}(z)$ - the first derivative function of $G$ (i.e. the *slope* of $G$). 
 
-* given $G$ that is nonlinear, this means that $g$ will be non-constant. You are able to try this out yourself using this app:
+* given $G$ that is nonlinear, this means that $g$ will be non-constant. You are able to try this out yourself using this [app here](https://floswald.shinyapps.io/marginal_effects_of_logit_probit/):
 
 ```{r, eval = FALSE}
 ScPoApps::launchApp("marginal_effects_of_logit_probit")
 ```
+
+or online 
 
 ---
 

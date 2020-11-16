@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>ScPoEconometrics: Advanced</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Florian Oswald" />
+    <script src="libs/header-attrs/header-attrs.js"></script>
+    <link href="libs/remark-css/default.css" rel="stylesheet" />
+    <script src="libs/kePrint/kePrint.js"></script>
+    <link href="libs/lightable/lightable.css" rel="stylesheet" />
+    <script src="https://use.fontawesome.com/5235085b15.js"></script>
+
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-41584331-6"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'UA-41584331-6');
+    </script>
+
+    <link rel="stylesheet" href="../../css/scpo.css" type="text/css" />
+    <link rel="stylesheet" href="../../css/scpo-fonts.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+# ScPoEconometrics: Advanced
+## Binary Response Models
+### Florian Oswald
+### SciencesPo Paris </br> 2020-11-16
+
+---
+
+
+layout: true
+
+&lt;div class="my-footer"&gt;&lt;img src="../../img/logo/ScPo-shield.png" style="height: 60px;"/&gt;&lt;/div&gt; 
+
+---
+
+
+
+# Where Are We At?
+
+.pull-left[
+
+**Last Time**
+
+* Panel Data Estimation
+
+* The *fixed effects estimator*
+
+* `fixest` package
+
+]
+
+--
+
+.pull-right[
+**Today**
+
+1. Binary Response Models!
+
+2. Another cool app! 😎
+
+]
+
+
+---
+class: separator, middle
+
+# Binary Response Models
+
+---
+
+# Binary Response Models
+
+.pull-left[
+
+So far, our models looked like this:
+
+`$$\begin{align}
+y &amp;= b_0 + b_1 + e \\
+e &amp;\sim N\left(0,\sigma^2\right)
+\end{align}$$`
+
+* The distributional assumption on `\(e\)`: 
+
+* In priniciple implies that `\(y \in \mathbb{R}\)`.
+
+* test scores, earnings, crime rates etc are all continuous outcomes. ✅
+
+]
+
+--
+
+.pull-right[
+
+But some outcomes are clearly binary (i.e. either `TRUE` or `FALSE`):
+
+* You either work or you don't,
+
+* You either have children or you don't,
+
+* You either bought a product or you didn't,
+
+* You flipped a coin and it came up either heads or tails.
+
+]
+
+---
+
+# Binary Outcomes
+
+* Outcomes restricted to `FALSE` vs `TRUE`, or `0` vs `1`. 
+
+* We'd have `\(y \in  \{0,1\}\)`. 
+
+* In those situations we are primarily interested in estimating the **response probability** or the **probability of success**:
+
+`$$p(x) = \Pr(y=1 | x)$$`
+* how does `\(p(x)\)` change as we change `\(x\)`?
+
+* we ask 
+    &gt;If we increase `\(x\)` by one unit, how would the probability of `\(y=1\)` change?
+
+---
+
+# Remembering Bernoulli Fun
+
+.pull-left[
+Remember the [Bernoulli Distribution?](https://en.wikipedia.org/wiki/Bernoulli_distribution): We call a random variable `\(y \in \{0,1\}\)` such that
+
+`$$\begin{align}
+\Pr(y = 1) &amp;= p \\
+\Pr(y = 0) &amp;= 1-p \\
+p &amp;\in[0,1]
+\end{align}$$`
+
+a *Bernoulli* random variable. 
+]
+
+--
+
+.pull-right[
+For us: *condition* those probabilities on a covariate `\(x\)`
+
+`$$\begin{align}
+\Pr(y = 1 | X = x) &amp;= p(x) \\
+\Pr(y = 0 | X = x) &amp;= 1-p(x) \\
+p(x) &amp;\in[0,1]
+\end{align}$$`
+
+* Partcularly: *expected value* (i.e. the average) of `\(Y\)` given `\(x\)`
+
+$$
+E[y | x] = p(x) \times 1 + (1-p(x)) \times 0 = p(x)
+$$
+
+* We often model **conditional expectations** 😉
+]
+
+---
+
+# The Linear Probability Model (LPM)
+
+* The simplest option. Model the response probability as
+
+$$
+\Pr(y = 1 | x) = p(x) = \beta_0 + \beta_1 x_1 + \dots + \beta_K x_K
+$$
+* Interpretation: *a 1 unit change in `\(x_1\)`, say, results in a change of `\(p(x)\)` of `\(\beta_1\)`.*
+
+## Example: Mroz (1987)
+
+* Female labor market participation
+
+* How does `inlf` (*in labor force*) status depend on non-wife household income, her education, age and number of small children?
+
+
+---
+
+# Mroz 1987
+
+
+```r
+data(mroz, package = "wooldridge")
+plot(factor(inlf) ~ age, data = mroz, 
+     ylevels = 2:1,
+     ylab = "in labor force?")
+```
+
+&lt;img src="07-probit_files/figure-html/unnamed-chunk-1-1.svg" style="display: block; margin: auto;" /&gt;
+
+---
+class: inverse
+
+# Task 1 (5 Minutes)
+
+1. What is the unit of observation in this data set?
+
+1. How many rows and columns of data do we have?
+
+1. What is the unconditional probability of being in the labor force?
+
+1. What is the unconditional mean of being in the labor force?
+
+1. What is the conditional probability of being in the labor force conditional on the number of kids less than 6 years old?
+
+
+---
+
+# Running the LPM
+
+.pull-left[
+
+```r
+LPM = lm(inlf ~ nwifeinc + educ + exper 
+         + I(exper^2) + age +I(age^2) + kidslt6, mroz)
+broom::tidy(LPM)
+```
+
+```
+## # A tibble: 8 x 5
+##   term         estimate std.error statistic  p.value
+##   &lt;chr&gt;           &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;    &lt;dbl&gt;
+## 1 (Intercept)  0.322     0.486       0.662  5.08e- 1
+## 2 nwifeinc    -0.00343   0.00145    -2.36   1.86e- 2
+## 3 educ         0.0375    0.00735     5.10   4.33e- 7
+## 4 exper        0.0383    0.00577     6.63   6.44e-11
+## 5 I(exper^2)  -0.000565  0.000189   -2.98   2.96e- 3
+## 6 age         -0.00112   0.0225     -0.0497 9.60e- 1
+## 7 I(age^2)    -0.000182  0.000258   -0.706  4.80e- 1
+## 8 kidslt6     -0.260     0.0341     -7.64   6.72e-14
+```
+]
+
+.pull-right[
+* **identical** to our previous linear regression models
+
+* Just `inlf` takes on only two values, 0 or 1. 
+
+* Results: non-wife income increases by 10 (i.e 10,000 USD), `\(p(x)\)` falls by 0.034 (that's a small effect!), 
+
+* an additional small child would reduce the probability of work by 0.26 (that's large). 
+
+* So far, so simple. ✌️
+]
+
+---
+
+# LPM: Predicting negative probabilities?!
+
+
+.pull-left[
+&lt;img src="07-probit_files/figure-html/unnamed-chunk-3-1.svg" style="display: block; margin: auto;" /&gt;
+]
+
+.pull-right[
+&lt;br&gt;
+&lt;br&gt;
+* LPM predictions of `\(p(x)\)` are not guaranteed to lie in unit interval `\([0,1]\)`. 
+
+* Remember: `\(e \sim N\left(0,\sigma^2\right)\)`
+
+* here, some probs smaller than zero!
+
+* Particularly annoying if you want *predictions*: What is a probability of -0.3? 🤔
+]
+
+---
+
+# LPM in Saturated Model: No Problem!
+
+.left-wide[
+
+```r
+library(dplyr)
+mroz %&lt;&gt;% 
+  # classify age into 3 and huswage into 2 classes
+  mutate(age_fct = cut(age,breaks = 3,labels = FALSE),
+         huswage_fct = cut(huswage, breaks = 2,labels = FALSE)) %&gt;%
+  mutate(classes = paste0("age_",age_fct,"_hus_",huswage_fct))
+
+LPM_saturated = mroz %&gt;%
+  lm(inlf ~ classes, data = .)
+broom::tidy(LPM_saturated)
+```
+
+```
+## # A tibble: 6 x 5
+##   term               estimate std.error statistic  p.value
+##   &lt;chr&gt;                 &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;    &lt;dbl&gt;
+## 1 (Intercept)          0.611     0.0277    22.0   2.98e-83
+## 2 classesage_1_hus_2  -0.611     0.350     -1.75  8.11e- 2
+## 3 classesage_2_hus_1  -0.0257    0.0404    -0.635 5.25e- 1
+## 4 classesage_2_hus_2  -0.277     0.203     -1.37  1.72e- 1
+## 5 classesage_3_hus_1  -0.149     0.0494    -3.01  2.72e- 3
+## 6 classesage_3_hus_2  -0.111     0.350     -0.317 7.51e- 1
+```
+
+]
+
+.right-thin[
+* *saturated model* : only have dummy explanatory variables 
+
+* Each class: `\(p(x)\)` *within that cell*. 
+
+
+]
+
+---
+
+# LPM in Saturated Model: No Problem!
+
+.left-wide[
+&lt;img src="07-probit_files/figure-html/saturated-1.svg" style="display: block; margin: auto;" /&gt;
+]
+
+.right-thin[
+
+* Each line segment: `\(p(x)\)` *within that cell*. 
+
+* E.g. women from the youngest age category and lowest husband income (class `age_1_hus_1`) have the highest probability of working (0.611).
+
+]
+
+
+---
+class: inverse
+
+# Task 2 (10 Minutes): Saturated LPM
+
+Define a *saturated* LPM as before
+
+$$
+\Pr(y = 1 | x) = p(x) = \beta_0 + \beta_1 x_1 + \dots + \beta_K x_K
+$$
+but restrict all `\(x_j \in \{0,1\}\)`.
+
+1. Create a binary indicator `age_lt_50 = 1` for age smaller than 50 and `0` else and same for `husage_lt_50`. 
+
+1. Run a full interactions model (use the `*` syntax in your formula) of `age_lt_50 = 1` interacted with `husage_lt_50`. I.e. run the following LPM: 
+$$
+\Pr(y = 1 | x) =\beta_0 + \beta_1 \text{age_lt_50} + \beta_2 \text{husage_lt_50} + \beta_3 \times \text{age_lt_50} \times \text{husage_lt_50}
+$$
+
+1. `predict` `\(\Pr(y = 1 | x)\)` for each observation using your LPM.
+
+1. What's the probability for a woman younger than 50 with a husband younger than 50?
+
+1. make a plot similar to the one on the previous slide.
+
+---
+
+# Nonlinear Binary Response Models
+
+In this class of models we change the way we model the response probability `\(p(x)\)`. Instead of the simple linear structure from above, we write
+
+$$
+\Pr(y = 1 | x) = p(x) = G \left(\beta_0 + \beta_1 x_1 + \dots + \beta_K x_K \right)
+$$
+* *almost* identical to LPM!
+
+* except the *linear index* `\(\beta_0 + \beta_1 x_1 + \dots + \beta_K x_K\)` is now inside some function `\(G(\cdot)\)`. 
+
+* Main property of `\(G\)`: transforms any `\(z\in \mathbb{R}\)` into a number in the interval `\((0,1)\)`. 
+
+* This immediately solves our problem of getting weird predictions for probabilities.
+
+---
+
+# `\(G\)`: **probit** and **logit**
+
+.left-wide[
+&lt;img src="07-probit_files/figure-html/cdfs-1.svg" style="display: block; margin: auto;" /&gt;
+]
+
+.right-thin[
+
+&lt;br&gt;
+For both **probit** and **logit** we see that:
+
+1. any value `\(x\)` results in a value `\(p(x)\)` between 0 and 1
+
+1. the higher `\(x\)`, the higher the resulting `\(p(x)\)`.
+
+1. Logit has *fatter tails* than Probit.
+
+]
+
+---
+
+# Running probit and logit in `R`: the `glm` function
+
+* We use the `glm` function to run a **generalized linear model**
+
+* This *generalizes* our standard linear model. We have to specify a `family` and a `link`:
+
+
+```r
+probit &lt;- glm(inlf ~ age, 
+                    data = mroz, 
+                    family = binomial(link = "probit"))
+
+logit &lt;- glm(inlf ~ age, 
+                    data = mroz, 
+                    family = binomial(link = "logit"))
+```
+
+---
+
+# Interpretation
+
+.pull-left[
+
+```r
+modelsummary::modelsummary(list("probit" = probit,"logit" = logit))
+```
+
+&lt;table class="table" style="width: auto !important; margin-left: auto; margin-right: auto;"&gt;
+ &lt;thead&gt;
+  &lt;tr&gt;
+   &lt;th style="text-align:left;"&gt;   &lt;/th&gt;
+   &lt;th style="text-align:center;"&gt; probit &lt;/th&gt;
+   &lt;th style="text-align:center;"&gt; logit &lt;/th&gt;
+  &lt;/tr&gt;
+ &lt;/thead&gt;
+&lt;tbody&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; (Intercept) &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 0.707 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 1.136 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt;  &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; (0.248) &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; (0.398) &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; age &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; -0.013 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; -0.020 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt;  &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; (0.006) &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; (0.009) &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; Num.Obs. &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 753 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 753 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; AIC &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 1028.9 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 1028.9 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; BIC &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 1038.1 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 1038.1 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; Log.Lik. &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; -512.442 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; -512.431 &lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+]
+
+.pull-right[
+* probit coefficient for `age` is -0.013 
+
+* logit: -0.02 for logit, 
+
+* impact of age on the prob of working is **negative**
+
+* However, **how** negative? We can't tell!
+]
+
+---
+
+# Interpretation
+
+The model is
+
+$$
+\Pr(y = 1 | \text{age})= G \left(x \beta\right) = G \left(\beta_0 + \beta_1 \text{age} \right) 
+$$
+and the *marginal effect* of `age` on the response probability is
+
+`$$\frac{\partial{\Pr(y = 1 | \text{age})}}{ \partial{\text{age}}} = g \left(\beta_0 + \beta_1 \text{age} \right) \beta_1$$`
+
+* function `\(g\)` is defined as `\(g(z) = \frac{dG}{dz}(z)\)` - the first derivative function of `\(G\)` (i.e. the *slope* of `\(G\)`). 
+
+* given `\(G\)` that is nonlinear, this means that `\(g\)` will be non-constant. You are able to try this out yourself using this [app here](https://floswald.shinyapps.io/marginal_effects_of_logit_probit/):
+
+
+```r
+ScPoApps::launchApp("marginal_effects_of_logit_probit")
+```
+
+or online 
+
+---
+
+# Interpretation
+
+So you can see that there is not one single *marginal effect* in those models, as that depends on *where we evaluate* the previous expression. In practice, there are two common approaches:
+
+1. report effect at the average values of `\(x\)`:             `$$g(\bar{x} \beta) \beta_j$$`
+
+1. report the sample average of all marginal effects: `$$\frac{1}{n} \sum_{i=1}^N g(x_i \beta) \beta_j$$`
+
+Thankfully there are packages available that help us to compute those marginal effects fairly easily. One of them is called [`mfx`](https://cran.r-project.org/web/packages/mfx/), and we would use it as follows:
+
+---
+
+# Interpretation
+
+
+```r
+f &lt;- "inlf ~ age + kidslt6 + nwifeinc" # setup a formula
+glms &lt;- list()
+glms$probit &lt;- glm(formula = f, 
+                    data = mroz, 
+                    family = binomial(link = "probit"))
+glms$logit &lt;- glm(formula = f, 
+                    data = mroz, 
+                    family = binomial(link = "logit"))
+# now the marginal effects versions
+glms$probitMean &lt;- mfx::probitmfx(formula = f, 
+                    data = mroz, atmean = TRUE)
+glms$probitAvg &lt;- mfx::probitmfx(formula = f, 
+                    data = mroz, atmean = FALSE)
+glms$logitMean &lt;- mfx::logitmfx(formula = f, 
+                    data = mroz, atmean = TRUE)
+glms$logitAvg &lt;- mfx::logitmfx(formula = f, 
+                    data = mroz, atmean = FALSE)
+```
+
+
+---
+
+# Interpretation
+
+&lt;table class="table" style="width: auto !important; margin-left: auto; margin-right: auto;"&gt;
+ &lt;thead&gt;
+  &lt;tr&gt;
+   &lt;th style="text-align:left;"&gt;   &lt;/th&gt;
+   &lt;th style="text-align:center;"&gt; probit &lt;/th&gt;
+   &lt;th style="text-align:center;"&gt; logit &lt;/th&gt;
+   &lt;th style="text-align:center;"&gt; probitMean &lt;/th&gt;
+   &lt;th style="text-align:center;"&gt; probitAvg &lt;/th&gt;
+   &lt;th style="text-align:center;"&gt; logitMean &lt;/th&gt;
+   &lt;th style="text-align:center;"&gt; logitAvg &lt;/th&gt;
+  &lt;/tr&gt;
+ &lt;/thead&gt;
+&lt;tbody&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; (Intercept) &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 2.080*** &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 3.394*** &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt;  &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt;  &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt;  &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt;  &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt;  &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; (0.309) &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; (0.516) &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt;  &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt;  &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt;  &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt;  &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; age &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; -0.035*** &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; -0.057*** &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; -0.014*** &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; -0.013*** &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; -0.014*** &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; -0.013*** &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt;  &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; (0.007) &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; (0.011) &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; (0.003) &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; (0.002) &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; (0.003) &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; (0.003) &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; kidslt6 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; -0.800*** &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; -1.313*** &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; -0.314*** &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; -0.290*** &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; -0.322*** &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; -0.292*** &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt;  &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; (0.111) &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; (0.188) &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; (0.044) &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; (0.036) &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; (0.046) &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; (0.047) &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; nwifeinc &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; -0.011*** &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; -0.019*** &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; -0.004*** &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; -0.004*** &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; -0.005*** &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; -0.004*** &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt;  &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; (0.004) &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; (0.007) &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; (0.002) &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; (0.001) &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; (0.002) &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; (0.002) &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; Num.Obs. &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 753 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 753 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 753 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 753 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 753 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 753 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; Log.Lik. &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; -478.395 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; -478.377 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; -478.395 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; -478.395 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; -478.377 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; -478.377 &lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;tfoot&gt;
+&lt;tr&gt;
+&lt;td style="padding: 0; border:0;" colspan="100%"&gt;
+&lt;sup&gt;&lt;/sup&gt; * p &amp;lt; 0.1, ** p &amp;lt; 0.05, *** p &amp;lt; 0.01&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tfoot&gt;
+&lt;/table&gt;
+
+---
+class: separator, middle
+
+
+# Goodness of Fit in Binary Models
+
+---
+
+# GOF in Binary Models
+
+* There is no universally accepted `\(R^2\)` for binary models.
+
+* We can think of a *pseudo* `\(R^2\)` which compares our model to one without any regressors:
+
+
+```r
+glms$probit0 &lt;- update(glms$probit, formula = . ~ 1)  # intercept model only
+1 - as.vector(logLik(glms$probit)/logLik(glms$probit0))
+```
+
+```
+## [1] 0.07084972
+```
+
+--
+
+* But that's not super informative (unlike the standard `\(R^2\)`). Changes in likelihood value are highly non-linear, so that's not great.
+
+* Let's check **accuracy** - what's the proportion correctly predicted! `round(fitted(x))` assigns `1` if the predicted prob `\(&gt; 0.5\)`.
+
+
+```r
+prop.table(table(true = mroz$inlf, pred = round(fitted(glms$probit))))
+```
+
+```
+##     pred
+## true         0         1
+##    0 0.1699867 0.2616202
+##    1 0.1221780 0.4462151
+```
+
+---
+
+# GOF in Binary Models: ROC Curves
+
+* The 0.5 cutuff is arbitrary. What if all predicted probs are `\(&gt; 0.5\)` but in the data there are about 50% of zeros? 
+
+* Let's choose an *arbitrary cutoff* `\(c \in (0,1)\)` and check accuracy for each value. This gives a better overview.
+
+--
+
+* Also, we can confront the **true positives rate** (TPR) with the **false positives rate** (FPR). 
+    1. TPR: number of women correctly predicted to work divided by num of working women.
+    2. FPR: number of women incorrectly predicted to work divided by num of non-working women.
+    
+--
+    
+* Plotting FPR vs TPR for each `\(c\)` defines the **ROC** (Receiver Operating Characteristics) Curve.
+
+* A good model has a ROC curve in the upper left corner: FPR = 0, TPR = 1.
+
+---
+
+# GOF in Binary Models: ROC Curves
+
+.left-wide[
+
+```r
+library(ROCR)
+pred &lt;- prediction(fitted(glms$probit), mroz$inlf)
+par(mfrow = c(1,2), mar = lowtop)
+plot(performance(pred,"acc"))
+plot(performance(pred,"tpr","fpr"))
+abline(0,1,lty = 2, col = "red")
+```
+
+&lt;img src="07-probit_files/figure-html/unnamed-chunk-11-1.svg" style="display: block; margin: auto;" /&gt;
+]
+
+.right-thin[
+&lt;br&gt;
+&lt;br&gt;
+* Best accuracy at around `\(c=0.6\)`
+
+* ROC always above 45 deg line. Better than random assignment (flipping a coin)! Yeah!
+
+]
+
+---
+class: inverse
+
+# Task 3 (10 Minutes): `SwissLabor`
+
+1. Load the `SwissLabor` Dataset from the `AER` package with `data(SwissLabor, package = "AER")`
+
+1. `skim` the data to get a quick overview. How many foreigners are in the data?
+
+1. Run a probit model of `participation` on all other variables plus age squared. Which age has the largest impact on participation? 
+
+1. What is the marginal effect at the mean of all `\(x\)` of being a foreigner on participation?
+
+1. Produce a ROC curve of this probit model and discuss it!
+
+
+
+---
+
+class: title-slide-final, middle
+background-image: url(../../img/logo/ScPo-econ.png)
+background-size: 250px
+background-position: 9% 19%
+
+# END
+
+
+
+
+|                                                                                                            |                                   |
+| :--------------------------------------------------------------------------------------------------------- | :-------------------------------- |
+| &lt;a href="mailto:florian.oswald@sciencespo.fr"&gt;.ScPored[&lt;i class="fa fa-paper-plane fa-fw"&gt;&lt;/i&gt;]               | florian.oswald@sciencespo.fr       |
+| &lt;a href="https://github.com/ScPoEcon/Advanced-Metrics-slides"&gt;.ScPored[&lt;i class="fa fa-link fa-fw"&gt;&lt;/i&gt;] | Slides |
+| &lt;a href="https://scpoecon.github.io/ScPoEconometrics"&gt;.ScPored[&lt;i class="fa fa-link fa-fw"&gt;&lt;/i&gt;] | Book |
+| &lt;a href="http://twitter.com/ScPoEcon"&gt;.ScPored[&lt;i class="fa fa-twitter fa-fw"&gt;&lt;/i&gt;]                          | @ScPoEcon                         |
+| &lt;a href="http://github.com/ScPoEcon"&gt;.ScPored[&lt;i class="fa fa-github fa-fw"&gt;&lt;/i&gt;]                          | @ScPoEcon                       |
+
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script src="../../js/ru_xaringan.js"></script>
+<script>var slideshow = remark.create({
+"highlightStyle": "github",
+"highlightLines": true,
+"countIncrementalSlides": false,
+"ratio": "16:9"
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>
