@@ -82,7 +82,7 @@ class: separator, middle
 So far, our models looked like this:
 
 $$\begin{align}
-y &= b_0 + b_1 + e \\
+y &= b_0 + b_1 x + e \\
 e &\sim N\left(0,\sigma^2\right)
 \end{align}$$
 
