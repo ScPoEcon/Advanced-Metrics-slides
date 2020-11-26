@@ -1,0 +1,734 @@
+---
+title: "ScPoEconometrics: Advanced"
+subtitle: "Intro to Statistical Learning"
+author: "Florian Oswald"
+date: "SciencesPo Paris </br> `r Sys.Date()`"
+output:
+  xaringan::moon_reader:
+    lib_dir: libs
+    css: [default, "../../css/scpo.css", "../../css/scpo-fonts.css"]
+    nature:
+      beforeInit: ["../../js/ru_xaringan.js"]
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+      ratio: "16:9"
+    includes:
+      in_header: ["../../libs/partials/header.html"]
+---
+
+layout: true
+
+<div class="my-footer"><img src="../../img/logo/ScPo-shield.png" style="height: 60px;"/></div> 
+
+---
+
+```{r setup, include=FALSE,warning=FALSE,message=FALSE}
+options(htmltools.dir.version = FALSE)
+knitr::opts_chunk$set(
+  message = FALSE,
+  warning = FALSE,
+  dev = "svg",
+  cache = TRUE,
+  fig.align = "center"
+  #fig.width = 11,
+  #fig.height = 5
+)
+
+# define vars
+om = par("mar")
+lowtop = c(om[1],om[2],0.1,om[4])
+library(magrittr)
+
+```
+
+# Intro to Statistical Learning: ISLR
+
+
+* This set of slides is based on the amazing book [*An introdution to statistical learning*](http://faculty.marshall.usc.edu/gareth-james/ISL/index.html) by Gareth James, Daniela Witten, Trevor Hastie and Robert Tibshirani.
+
+* I'll freely use some of their plots. They say that is ok if I put:
+> Some of the figures in this presentation are taken from "An Introduction to Statistical Learning, with applications in R"  (Springer, 2013) with permission from the authors: G. James, D. Witten,  T. Hastie and R. Tibshirani
+
+* Thanks so much for putting that resource online **for free**.
+
+* We will try to look at their material with our econometrics background. It's going to be fun!
+
+
+---
+
+# What is Statistical Learning?
+
+.pull-left[
+
+* We want to learn the relationship `Y ~ X`, where `X` has $p$ components.
+
+* We assume a general form like
+$$Y = f(X) + \epsilon$$
+
+* $f$ is a fixed function, but we don't know what it looks like.
+
+* We want an **estimate** $\hat{f}$ for it.
+
+]
+
+--
+
+.pull-right[
+
+* Assume $E[\epsilon|x] = 0$!
+
+* I.e. we assume to have an **identified** model
+
+* We have done this 👈 many times before already.
+
+* But we restricted ourselves to OLS estimation. There are so many ways to estimate $f$!
+]
+
+---
+
+# An Example of $f$
+
+.left-wide[
+```{r,echo = FALSE,out.width = 600}
+knitr::include_graphics("../../img/ISLR/chapter2/2.3.png")
+```
+]
+
+.right-thin[
+<br>
+<br>
+<br>
+* The .blue[blue] shape is true relationship $f$
+
+* .red[Red] dots are observed data: $Y$
+
+* .red[Red] dots are off .blue[blue] shape because of $\epsilon$
+]
+
+---
+
+# What Do You Want To Do with your $\hat{f}$?
+
+Fundamental Difference:  (🚨 slight exaggerations ahead!)
+
+.pull-left[
+## Prediction (Machine Learning, AI)
+
+* generate $\hat{Y} = \hat{f}(X)$
+
+* $\hat{f}$ is a **black box**
+
+* We don't know or care *why* it works as long as the prediction is good
+]
+
+--
+
+.pull-right[
+## Inference (ECON)
+
+* *Why* does $Y$ respond to $X$? (Causality)
+
+* *How* does $Y$ respond to $X_p$? Interpret parameter estimates
+
+* $\hat{f}$ is not a **black box**.
+
+* (Out of sample) Prediction often secondary concern.
+
+]
+
+---
+
+# What makes a Good prediction?
+
+Remember the data generating process (DGP): $$Y = f(X) + \epsilon$$
+
+.pull-left[
+
+* There are two (!) **Errors**:
+    1. Reducible error $\hat{f}$
+    2. Irredicuble error $\epsilon$
+
+* We can work to improve the Reducible error
+
+* The Irreducible error is a feature of the DGP, hence, nature. Life. Karma. Measurement incurs error.
+]
+
+--
+
+.pull-right[
+
+* The squared error for a given estimate $\hat{f}$ is
+$E[Y - \hat{Y}]^2$: Similar to *mean squared residuals*!
+
+* One can easily show that that this factors as
+$$\begin{align}E&[f(X) + \epsilon - \hat{f}(X)]^2 =\\&[\underbrace{f(X) -\hat{f}(X)}_{\text{Reducible}}]^2 + \underbrace{Var(\epsilon)}_{\text{Irreducible}}\end{align}$$
+
+]
+
+---
+
+# First Classification of Estimators
+
+In general:
+
+.pull-left[
+
+## Nonlinear Models
+
+* More nonlinear models are able to get closer to the data.
+
+* Hence, they are good predictors
+
+* But hard to **interpret**
+
+]
+
+.pull-right[
+
+## Linear Models
+
+* Easy to Interpret
+
+* Less tight fit to data
+
+* worse Prediction
+]
+
+
+---
+
+# How to Estimate an $f$?
+
+.pull-left[
+## Training Data
+
+1. $n$ data points $i=1,...,n$
+
+2. $y_i$ is $i$'s response
+
+3. $X_i = (x_{i1},\dots,x_{ip})$ are predictors
+
+4. Data: ${(X_1,y_1),\dots,(X_n,y_n)}$
+
+(Up until now, *training* data was the only data we have encountered!)
+
+]
+
+.pull-right[
+## Estimate $\hat{f}$ = Learn $\hat{f}$
+
+There are two broad classes of learning $\hat{f}$:
+
+1. Parametric Learning
+
+2. Non-Parametric Learning
+]
+
+---
+class: separator, middle
+
+# Parametric Methods
+
+---
+
+# Parametrics Methods
+
+.pull-left[
+
+## Procedure
+
+1. We make a **parametric assumption**, i.e. we write down how we think $f$ looks like. E.g. $$Y = \beta_0 + \beta_1 x_1 + \dots + \beta_p x_p$$ Here we only have to find $p+1$ numbers!
+
+2. We *train* the model, i.e. we choose the $\beta$'s. We are pretty good at that -> OLS ✌️
+]
+
+.pull-right[
+## Potential Issues
+
+* Typically, our model is **not** the true DGP. Why we want a model in the first place.
+
+* If our parametric assumption is a poor model of the true DGP, we will be far away from the truth. Kind of...logical.
+
+
+]
+
+---
+
+
+# A Parametric Model for $f$
+
+.left-wide[
+```{r,echo = FALSE,out.width = 600}
+knitr::include_graphics("../../img/ISLR/chapter2/2.4.png")
+```
+]
+
+.right-thin[
+
+* The .hi-yellow[yellow] plane is $\hat{f}$: $$y = \beta_0 + \beta_1 \text{educ} + \beta_2 \text{sen}$$
+
+* It's easy to interpret (need only 3 $\beta$'s to draw this!)
+
+* Incurs substantial training error because it's a rigid plane (go back to blue shape to check true $f$).
+]
+
+---
+
+# Non-Parametric Methods
+
+.pull-left[
+
+
+* We make a no explicit assumption about functional form.
+
+* We try to get *as close as possible* to the data points.
+
+* We try to do that under some contraints like:
+    * Not too rough
+    * Not too wiggly
+    
+]
+
+.pull-right[
+    
+* Usually provides a good fit to the training data. 
+
+* **But** it does *not* reduce the number of parameters! 
+
+* Quite the contrary. The number of parameters increases so fast that those methods quickly run into feasibility issues (your computer can't run the model!)
+]
+
+---
+
+# A Non-Parametric Model for $f$
+
+.left-wide[
+```{r,echo = FALSE,out.width = 600}
+knitr::include_graphics("../../img/ISLR/chapter2/2.5.png")
+```
+]
+
+.right-thin[
+<br>
+
+* The .hi-yellow[yellow] plane is a thin-plate spline
+
+* This clearly captures the shape of the true $f$ (.blue[the blue one]) better: Smaller Training Error.
+
+* But it's harder to interpret. Is `income` increasing with `Seniority`?
+
+]
+
+
+---
+
+# Overfitting: Choosing *Smoothness*
+
+.left-wide[
+```{r,echo = FALSE,out.width = 600}
+knitr::include_graphics("../../img/ISLR/chapter2/2.6.png")
+```
+]
+
+.right-thin[
+
+* We can choose the degree of flexibility or *smoothness* of our .hi-yellow[spline] surface.
+
+* Here we increased flexibility so much that there is **zero** training error: .hi-yellow[spline] goes through all .red[points]!
+
+* But it's a much wigglier surface now than before! Even harder to interpret.
+
+]
+
+---
+
+# Overfitting: Choosing *Smoothness*
+
+.pull-left[
+## Smooth, not wiggly
+```{r,echo = FALSE,out.width = 600}
+knitr::include_graphics("../../img/ISLR/chapter2/2.5.png")
+```
+]
+
+.pull-right[
+## Smooth but high variance (wiggly!)
+```{r,echo = FALSE,out.width = 600}
+knitr::include_graphics("../../img/ISLR/chapter2/2.6.png")
+```
+]
+
+---
+
+# Overfitting: Over-doing it
+
+.pull-left[
+
+* You can see that the researcher has an active choice to make here: *how smooth*? 
+
+* Parameters which guide choices like that are called **tuning parameters**.
+
+* As $\hat{f}$ becomes too variable, we say there is **overfitting**: The model tries too hard to fit patterns in the data, which are **not** part of the true $f$! 
+
+]
+
+.pull-right[
+```{r,echo = FALSE,out.width = 600}
+knitr::include_graphics("../../img/ISLR/chapter2/2.6.png")
+```
+]
+
+---
+
+# What Method To Aim For?
+
+> Why would we not always want the most flexible method available?
+
+* that's a reasonable question to ask.
+
+* The previous slide already gave a partial answer: more flexbility generally leads to more variability.
+
+* If we want to use our model outside of our training data set, that's an issue.
+
+---
+
+# Classifying Methods 1: **flexibility** vs **interpretability**
+
+.pull-left[
+* This graph offers a nice classification of statistical learning methods in **flexibility** vs **interpretability** space.
+
+* Sometimes it's obvious what the right choice is for your application. 
+
+* But often it's not. It's a more complicated tradeoff than the picture suggests.
+
+* (It's a very helpful picture!)
+
+* We will only be touching upon a small number of those. They are all nicely treated in the ISLR book though!
+]
+
+.pull-right[
+```{r,echo = FALSE,out.width = 600}
+knitr::include_graphics("../../img/ISLR/chapter2/2.7.png")
+```
+]
+
+---
+
+# Classifying Methods 2: Supervised vs Unsupervised Learning
+
+.pull-left[
+
+## Supervised Learning
+
+* We have measures of input $x$ and output $y$
+
+* We could *predict* new $y$'s
+
+* Or infer things about `Y ~ X`
+
+* Regression or Classification are typical tasks
+]
+
+.pull-right[
+## Unsupervised Learning
+
+* We have **no** measure of output $y$!
+
+* Only a bunch of $x$'s
+
+* We are interested in *grouping* of those $x$ (**cluster analysis**)
+]
+
+---
+
+# Clustering Example
+
+
+.left-thin[
+<br>
+* Sometimes clustering is easy: in the left panel the data fall naturally into groups.
+
+* When data overlap, it's harder: right panel
+
+
+]
+
+.right-wide[
+```{r,echo = FALSE,out.width = 900}
+knitr::include_graphics("../../img/ISLR/chapter2/2.8.png")
+```
+
+]
+
+---
+class: separator, middle
+
+# Assessing Model Accuracy
+
+## What is a good model?
+
+---
+
+# Quality of Fit: the Mean Squard Error
+
+.pull-left[
+* We know the **mean squared error (MSE)** already:
+    $$MSE = \frac{1}{n} \sum_{i = 1}^n (y_i - \hat{f}(x_i))^2$$
+* We encountered the closely related **sum of squared residuals (SSR)**: 
+    $$SSR = \sum_{i = 1}^n (y_i - \hat{f}(x_i))^2$$
+    
+* As we know, OLS minimizes the SSR. (minimizing SSR or MSE yields the same OLS estimates.)
+
+]
+
+--
+
+.pull-right[
+
+
+* However, what MSE 👈 really is: it's the **training MSE**! It's computed using the *same* data we used to compute $\hat{f}$!
+
+* Suppose we used data on last 6 months of stock market prices and we want to predict future prices. *We don't really care how well we can predict the past prices*. 
+
+* In general, we care about how $\hat{f}$ will perform on **unseen** data. We call this **test data**.
+    
+]
+
+---
+
+# Training MSE vs Test MSE
+
+.pull-left[
+## Training
+
+* We have a *training data set* 
+    $$\{(y_1,x_1),\dots,(y_n,x_n)\}$$
+
+* we use those $n$ observations to find the function $q$ that minimizes the **Training MSE**:
+    $$\hat{f} = \arg \min_q MSE = \frac{1}{n} \sum_{i = 1}^n (y_i - q(x_i))^2$$
+    
+]
+
+--
+
+.pull-right[
+## Testing
+
+* We want to know whether $\hat{f}$ will perform well on *new* data.
+
+* Suppose $(y_0,x_0)$ is unseen data - in particular, we haven't used it to train our model!
+
+* We want to know the magnitude of the **test MSE**:
+    $$E [(y_0 - \hat{f}(x_0))^2]$$
+
+]
+
+---
+
+# A Problem of MSEs
+
+.pull-left[
+
+* In many cases we don't have a true test data set at hand.
+
+* Most methods therefore try to minimize the training MSE. (OLS does!)
+
+* At first sight this seems really reasonable.
+]
+
+--
+
+.pull-right[
+
+* The problem is that test and training MSE are less closely related than one might think!
+
+* Very small training MSEs might go together with pretty big test MSEs!
+
+* That is, most methods are *really* good at fitting the training data, but they fail to generalize to outside of that set of point!
+]
+
+---
+
+# Simulation: We *know* the test data!
+
+.left-thin[
+
+* In an artifical setting we now the test data because we know the true $f$.
+
+* Here Solid black line. 👉
+
+* Increasing flexibility mechanically reduces training error (grey curve in right panel.)
+
+* However not the test MSE, in general (red curve!)
+]
+
+
+.right-wide[
+```{r,echo = FALSE,out.width = 900}
+knitr::include_graphics("../../img/ISLR/chapter2/2.9.png")
+```
+
+]
+
+
+---
+
+# Simulation: App!
+
+
+* Let's look at our [app online](https://floswald.shinyapps.io/bias_variance/) or `ScPoApps::launchApp("bias_variance_tradeoff")`
+
+```{r,echo = FALSE}
+knitr::include_graphics("../../img/ISLR/chapter2/app.gif")
+```
+
+
+---
+
+# So! A Tradeoff at Last!
+
+* What's going on here?
+
+* Initially, increasing flexibility provides a better fit to the observed data points, decreasing the training error.
+
+* That means that also the test error decreases for a while.
+
+* As soon as we start **overfitting** the data points, though, the test error starts to increase again!
+
+* At very high flexibility, our method tries to fit patterns in the data which are *not* part of the true $f$ (the black line)!
+
+* To make matters worse, the extent of this phenomenon will depend on the shape of the underlying **true** $f$!
+
+---
+
+# Almost linear $f$
+
+.left-thin[
+
+* In this example, the true $f$ is almost linear.
+
+* The inflexible method does well!
+
+* Increasing flexibility incurs large testing MSE.
+]
+
+
+.right-wide[
+```{r,echo = FALSE,out.width = 900}
+knitr::include_graphics("../../img/ISLR/chapter2/2.10.png")
+```
+]
+
+---
+
+# Highly Non-linear $f$
+
+.left-thin[
+
+* In this example, the true $f$ is very non linear.
+
+* The inflexible method does very poorly in both trainign and testing MSE.
+
+* the model at 10 degrees of freedom performs best here.
+
+* 👉 You can see that the best model is not obvious to choose!
+]
+
+
+.right-wide[
+```{r,echo = FALSE,out.width = 900}
+knitr::include_graphics("../../img/ISLR/chapter2/2.11.png")
+```
+
+]
+
+---
+
+# Formalizing the Bias-Variance-Tradeoff
+
+* We can decompose the expected test MSE as follows:
+    $$E(y_0 - \hat{f}(x_0))^2 = Var(\hat{f}(x_0)) + \left[\text{Bias}(\hat{f}(x_0))\right]^2 + Var(\epsilon)$$
+    
+* From this we can see that we have to minimize **both** variance and bias when chooseing a suitable method.
+
+* We have seen before that those are competing forces in some situations.
+
+* Notice that the best we could achieve is $Var(\epsilon) >0$ since that is a feature of our DGP.
+
+---
+
+# Bias-Variance-Tradeoff: What are Bias and Variance?
+
+.pull-left[
+## Variance
+
+* How much would $\hat{f}$ change if we estimated it using a **different** data set?
+
+* Clearly we expect some variation when using different samples (sampling variation), but not too much.
+
+* Flexibel models: moving just a single data point will result in a large change in $\hat{f}$.
+]
+
+.pull-right[
+## Bias
+
+* The difference between $\hat{f}$ and $f$ (notice the missing $\epsilon$).
+
+* We approximate a potentially very complex real phenomenon by a *simple* model, e.g. linear model.
+
+* If true model highly non-linear, linear model will be biased.
+
+* General: more flexible, lower bias but higher variance.
+
+]
+
+
+---
+
+# Bias Variance Tradeoff vs Flexibility
+
+
+.left-thin[
+
+* Here 👉 we illustrate for preceding 3 true $f$'s
+
+* Precise Tradeoff depends on $f$'s shape.
+
+* Bias declines with flexibility.
+
+* Test MSE is U-shaped, Var increasing.
+
+]
+
+
+.right-wide[
+```{r,echo = FALSE,out.width = 900}
+knitr::include_graphics("../../img/ISLR/chapter2/2.12.png")
+```
+
+]
+
+
+
+---
+
+
+class: title-slide-final, middle
+background-image: url(../../img/logo/ScPo-econ.png)
+background-size: 250px
+background-position: 9% 19%
+
+# END
+
+
+
+
+|                                                                                                            |                                   |
+| :--------------------------------------------------------------------------------------------------------- | :-------------------------------- |
+| <a href="mailto:florian.oswald@sciencespo.fr">.ScPored[<i class="fa fa-paper-plane fa-fw"></i>]               | florian.oswald@sciencespo.fr       |
+| <a href="https://github.com/ScPoEcon/Advanced-Metrics-slides">.ScPored[<i class="fa fa-link fa-fw"></i>] | Slides |
+| <a href="https://scpoecon.github.io/ScPoEconometrics">.ScPored[<i class="fa fa-link fa-fw"></i>] | Book |
+| <a href="http://twitter.com/ScPoEcon">.ScPored[<i class="fa fa-twitter fa-fw"></i>]                          | @ScPoEcon                         |
+| <a href="http://github.com/ScPoEcon">.ScPored[<i class="fa fa-github fa-fw"></i>]                          | @ScPoEcon                       |
+
