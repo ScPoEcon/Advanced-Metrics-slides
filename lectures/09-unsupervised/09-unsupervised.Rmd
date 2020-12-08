@@ -329,7 +329,7 @@ class: separator, middle
 
 # Regularized Regression and Variable Selection
 
-## What to do when you have 81 potential predictors?
+## What to do when you have 307 potential predictors?
 
 ---
 
