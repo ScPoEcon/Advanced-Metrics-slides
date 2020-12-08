@@ -91,7 +91,7 @@ $$Y = f(X) + \epsilon$$
 
 .left-wide[
 ```{r,echo = FALSE,out.width = 600}
-knitr::include_graphics("../../img/ISLR/chapter2/2.3.png")
+knitr::include_graphics("imgs/2.3.png")
 ```
 ]
 
@@ -260,7 +260,7 @@ class: separator, middle
 
 .left-wide[
 ```{r,echo = FALSE,out.width = 600}
-knitr::include_graphics("../../img/ISLR/chapter2/2.4.png")
+knitr::include_graphics("imgs/2.4.png")
 ```
 ]
 
@@ -305,7 +305,7 @@ knitr::include_graphics("../../img/ISLR/chapter2/2.4.png")
 
 .left-wide[
 ```{r,echo = FALSE,out.width = 600}
-knitr::include_graphics("../../img/ISLR/chapter2/2.5.png")
+knitr::include_graphics("imgs/2.5.png")
 ```
 ]
 
@@ -327,7 +327,7 @@ knitr::include_graphics("../../img/ISLR/chapter2/2.5.png")
 
 .left-wide[
 ```{r,echo = FALSE,out.width = 600}
-knitr::include_graphics("../../img/ISLR/chapter2/2.6.png")
+knitr::include_graphics("imgs/2.6.png")
 ```
 ]
 
@@ -348,14 +348,14 @@ knitr::include_graphics("../../img/ISLR/chapter2/2.6.png")
 .pull-left[
 ## Smooth, not wiggly
 ```{r,echo = FALSE,out.width = 600}
-knitr::include_graphics("../../img/ISLR/chapter2/2.5.png")
+knitr::include_graphics("imgs/2.5.png")
 ```
 ]
 
 .pull-right[
 ## Smooth but high variance (wiggly!)
 ```{r,echo = FALSE,out.width = 600}
-knitr::include_graphics("../../img/ISLR/chapter2/2.6.png")
+knitr::include_graphics("imgs/2.6.png")
 ```
 ]
 
@@ -375,7 +375,7 @@ knitr::include_graphics("../../img/ISLR/chapter2/2.6.png")
 
 .pull-right[
 ```{r,echo = FALSE,out.width = 600}
-knitr::include_graphics("../../img/ISLR/chapter2/2.6.png")
+knitr::include_graphics("imgs/2.6.png")
 ```
 ]
 
@@ -409,7 +409,7 @@ knitr::include_graphics("../../img/ISLR/chapter2/2.6.png")
 
 .pull-right[
 ```{r,echo = FALSE,out.width = 600}
-knitr::include_graphics("../../img/ISLR/chapter2/2.7.png")
+knitr::include_graphics("imgs/2.7.png")
 ```
 ]
 
@@ -456,7 +456,7 @@ knitr::include_graphics("../../img/ISLR/chapter2/2.7.png")
 
 .right-wide[
 ```{r,echo = FALSE,out.width = 900}
-knitr::include_graphics("../../img/ISLR/chapter2/2.8.png")
+knitr::include_graphics("imgs/2.8.png")
 ```
 
 ]
@@ -566,7 +566,7 @@ class: separator, middle
 
 .right-wide[
 ```{r,echo = FALSE,out.width = 900}
-knitr::include_graphics("../../img/ISLR/chapter2/2.9.png")
+knitr::include_graphics("imgs/2.9.png")
 ```
 
 ]
@@ -580,7 +580,7 @@ knitr::include_graphics("../../img/ISLR/chapter2/2.9.png")
 * Let's look at our [app online](https://floswald.shinyapps.io/bias_variance/) or `ScPoApps::launchApp("bias_variance_tradeoff")`
 
 ```{r,echo = FALSE}
-knitr::include_graphics("../../img/ISLR/chapter2/app.gif")
+knitr::include_graphics("imgs/app.gif")
 ```
 
 
@@ -616,7 +616,7 @@ knitr::include_graphics("../../img/ISLR/chapter2/app.gif")
 
 .right-wide[
 ```{r,echo = FALSE,out.width = 900}
-knitr::include_graphics("../../img/ISLR/chapter2/2.10.png")
+knitr::include_graphics("imgs/2.10.png")
 ```
 ]
 
@@ -638,7 +638,7 @@ knitr::include_graphics("../../img/ISLR/chapter2/2.10.png")
 
 .right-wide[
 ```{r,echo = FALSE,out.width = 900}
-knitr::include_graphics("../../img/ISLR/chapter2/2.11.png")
+knitr::include_graphics("imgs/2.11.png")
 ```
 
 ]
@@ -704,7 +704,7 @@ knitr::include_graphics("../../img/ISLR/chapter2/2.11.png")
 
 .right-wide[
 ```{r,echo = FALSE,out.width = 900}
-knitr::include_graphics("../../img/ISLR/chapter2/2.12.png")
+knitr::include_graphics("imgs/2.12.png")
 ```
 
 ]

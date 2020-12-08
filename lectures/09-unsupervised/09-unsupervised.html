@@ -1,0 +1,1206 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>ScPoEconometrics: Advanced</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Florian Oswald" />
+    <script src="libs/header-attrs/header-attrs.js"></script>
+    <link href="libs/remark-css/default.css" rel="stylesheet" />
+    <script src="https://use.fontawesome.com/5235085b15.js"></script>
+
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-41584331-6"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'UA-41584331-6');
+    </script>
+
+    <link rel="stylesheet" href="../../css/scpo.css" type="text/css" />
+    <link rel="stylesheet" href="../../css/scpo-fonts.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+# ScPoEconometrics: Advanced
+## Statistical Learning 2
+### Florian Oswald
+### SciencesPo Paris </br> 2020-12-08
+
+---
+
+
+layout: true
+
+&lt;div class="my-footer"&gt;&lt;img src="../../img/logo/ScPo-shield.png" style="height: 60px;"/&gt;&lt;/div&gt; 
+
+---
+
+
+
+# Resampling Methods
+
+.pull-left[
+
+* We already encountered the **bootstrap**: we resample repeatedly *with replacement* from our analysis data.
+
+* We'll also learn about **cross validation** today, which is a related idea.
+
+* The bootstratp is useful assess model uncertainty.
+
+* Cross Validation is used assess model accuracy. 
+
+]
+
+--
+
+.pull-right[
+* Remember how **bootstrapping** works: We just pretend that our sample *is* the full population.
+
+* And we repeatedly draw from this randomly, with replacement.
+
+* This will create a sampling distribution, which *closely* approximates the true sampling distribution!
+
+* We can use this to compute confidence intervals when no closed form exists or illustrate uncertainty.
+]
+
+
+---
+
+# Do The Bootstrap!
+
+.left-thin[
+
+* The `tidymodels` suite of packages is amazing here. I copied most of the code from [them](https://www.tidymodels.org/learn/statistics/bootstrap/).
+
+* Let's look at fitting a *nonlinear* least squares model to this data:
+
+
+```r
+library(tidymodels)
+ggplot(mtcars, aes(mpg,wt)) +
+  geom_point()
+```
+]
+
+.right-wide[
+&lt;img src="09-unsupervised_files/figure-html/unnamed-chunk-2-1.svg" style="display: block; margin: auto;" /&gt;
+]
+
+---
+
+# Non-linear Least Squares (NLS) for Cars
+
+
+.left-thin[
+&lt;br&gt;
+
+* Remember: OLS required *linear* parameters.
+
+* NLS relaxes that:$$y_i = f(x_i,\beta) + e_i$$
+
+* Again want the `\(\beta\)`'s. 
+
+* `\(f\)` is known!
+
+]
+
+.right-wide[
+
+```r
+nlsfit &lt;- nls(mpg ~ k / wt + b, 
+              mtcars, 
+              start = list(k = 1, b = 0))
+
+ggplot(mtcars, aes(wt, mpg)) +
+    geom_point() +
+    geom_line(aes(y = predict(nlsfit))) + theme_bw() + ggtitle("Cars with NLS Fit")
+```
+
+&lt;img src="09-unsupervised_files/figure-html/unnamed-chunk-3-1.svg" style="display: block; margin: auto;" /&gt;
+]
+
+---
+
+# Bootstrapping the NLS models
+
+.left-thin[
+
+1. Let's create 200 bootstrap samples.
+
+2. Estimate our NLS model on each.
+
+3. Get coefficients from each.
+
+4. Assess their variation.
+]
+
+.right-wide[
+
+```r
+# 1.
+boots &lt;- bootstraps(mtcars, times = N, apparent = TRUE)
+
+# 2. a) create a wrapper for nls
+fit_nls_on_bootstrap &lt;- function(split) {
+    nls(mpg ~ k / wt + b, analysis(split), start = list(k = 1, b = 0))
+}
+
+# 2. b) map wrapper on to each bootstrap sample
+boot_models &lt;-
+  boots %&gt;% 
+  mutate(model = map(splits, fit_nls_on_bootstrap),
+         coef_info = map(model, tidy))
+# 3. 
+boot_coefs &lt;- 
+  boot_models %&gt;% 
+  unnest(coef_info)
+```
+]
+
+---
+
+# Bootstrapping the NLS models: Using the `rsample` package
+
+.left-thin[
+
+* `rsample` functions *split* datasets. `bootstrap` draws total number of observations for `analysis` (i.e. for *training*)
+
+* `boot_coefs` has estimates for each bootstrap sample.
+
+]
+
+.right-wide[
+
+```r
+head(boots)  
+```
+
+```
+## # A tibble: 6 x 2
+##   splits          id          
+##   &lt;list&gt;          &lt;chr&gt;       
+## 1 &lt;split [32/15]&gt; Bootstrap001
+## 2 &lt;split [32/11]&gt; Bootstrap002
+## 3 &lt;split [32/9]&gt;  Bootstrap003
+## 4 &lt;split [32/12]&gt; Bootstrap004
+## 5 &lt;split [32/12]&gt; Bootstrap005
+## 6 &lt;split [32/14]&gt; Bootstrap006
+```
+
+```r
+head(boot_coefs)
+```
+
+```
+## # A tibble: 6 x 8
+##   splits          id           model term  estimate std.error statistic  p.value
+##   &lt;list&gt;          &lt;chr&gt;        &lt;lis&gt; &lt;chr&gt;    &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;    &lt;dbl&gt;
+## 1 &lt;split [32/15]&gt; Bootstrap001 &lt;nls&gt; k        48.9       3.14     15.6  6.22e-16
+## 2 &lt;split [32/15]&gt; Bootstrap001 &lt;nls&gt; b         2.77      1.19      2.32 2.73e- 2
+## 3 &lt;split [32/11]&gt; Bootstrap002 &lt;nls&gt; k        50.7       6.43      7.89 8.40e- 9
+## 4 &lt;split [32/11]&gt; Bootstrap002 &lt;nls&gt; b         3.36      2.18      1.54 1.34e- 1
+## 5 &lt;split [32/9]&gt;  Bootstrap003 &lt;nls&gt; k        40.0       3.53     11.3  2.32e-12
+## 6 &lt;split [32/9]&gt;  Bootstrap003 &lt;nls&gt; b         6.29      1.33      4.73 5.02e- 5
+```
+]
+
+
+
+---
+
+
+# Confidence Intervals
+
+.left-thin[
+
+* We can now easily compute and plot bootstrap CIs!
+
+* Remember: *percentile method* just takes 2.5 and 97.5 quantiles of bootstrap sampling distribution as bounds of CI.
+
+]
+
+.right-wide[
+
+```r
+percentile_intervals &lt;- int_pctl(boot_models, coef_info)
+ggplot(boot_coefs, aes(estimate)) +
+  geom_histogram(bins = 30) +
+  facet_wrap( ~ term, scales = "free") +
+  geom_vline(aes(xintercept = .lower), data = percentile_intervals, col = "blue") +
+  geom_vline(aes(xintercept = .upper), data = percentile_intervals, col = "blue")
+```
+
+&lt;img src="09-unsupervised_files/figure-html/unnamed-chunk-6-1.svg" style="display: block; margin: auto;" /&gt;
+]
+
+
+
+---
+
+# Illustrate More Uncertainty
+
+.left-thin[
+
+* It's also easy to illustrate uncertainty in fit with this.
+
+* Let's get predicted values with `augment` from our models.
+
+
+```r
+boot_aug &lt;- 
+  boot_models %&gt;% 
+  sample_n(200) %&gt;% 
+  mutate(augmented = 
+           map(model, augment)) %&gt;% 
+  unnest(augmented)
+```
+
+]
+
+.right-wide[
+
+```r
+ggplot(boot_aug, aes(wt, mpg)) +
+  geom_line(aes(y = .fitted, group = id), alpha = .1, col = "red") +
+  geom_point() + theme_bw()
+```
+
+&lt;img src="09-unsupervised_files/figure-html/unnamed-chunk-8-1.svg" style="display: block; margin: auto;" /&gt;
+]
+
+
+
+---
+
+# Cross Validation
+
+.pull-left[
+
+* Last week we encountered the test MSE.
+
+* In simulation studies, we can compute it, but in real life? It's much harder to obtain a true test data set.
+
+* What we can do in practice, however, is to **hold out** part of our data for testing purposes.
+
+* We just set it aside at the beginning and don't use it for training.
+]
+
+.pull-right[
+
+Several Approaches:
+
+1. Validation Set
+
+2. Leave-one-out cross validation (LOOCV)
+
+3. k-fold Cross Validation (k-CV)
+
+]
+
+---
+
+# K-fold Cross Validation (k-CV)
+
+.pull-left[
+* Randomly divide your data into `\(k\)` groups of equal size.
+
+* train model on all but last groups (*folds*), compute MSE on last fold.
+
+* train model on all but penultimat fold, compute MSE there, etc
+
+* The *k-fold CV* is then `$$CV_{(k)} = \frac{1}{k} \sum_{i=1}^k \text{MSE}_i$$`
+]
+
+--
+
+.pull-right[
+
+* We have to fit the model `\(k\)` times here. 
+
+* Previous methods (LOOCV) are much more costly in terms of computing time.
+
+* In practice one often chooses `\(k=5\)` or `\(k=10\)`.
+
+* Let's look again at the `rsample` package as to how to set this up!
+]
+
+---
+
+# `rsample` package again
+
+.pull-left[
+## Splits for Bootstrap Samples
+
+
+```r
+library(rsample) # already loaded...
+bcars &lt;- bootstraps(mtcars, times = 3)
+head(bcars,n=3)
+```
+
+```
+## # Bootstrap sampling 
+## # A tibble: 3 x 2
+##   splits          id        
+##   &lt;list&gt;          &lt;chr&gt;     
+## 1 &lt;split [32/8]&gt;  Bootstrap1
+## 2 &lt;split [32/11]&gt; Bootstrap2
+## 3 &lt;split [32/13]&gt; Bootstrap3
+```
+
+```r
+nrow(analysis(bcars$splits[[1]]))
+```
+
+```
+## [1] 32
+```
+]
+
+.pull-right[
+## Splits for Testing/Training
+
+
+```r
+set.seed(1221)
+cvcars &lt;- vfold_cv(mtcars, v = 10, repeats = 10)
+head(cvcars,n=3)
+```
+
+```
+## # A tibble: 3 x 3
+##   splits         id       id2   
+##   &lt;list&gt;         &lt;chr&gt;    &lt;chr&gt; 
+## 1 &lt;split [28/4]&gt; Repeat01 Fold01
+## 2 &lt;split [28/4]&gt; Repeat01 Fold02
+## 3 &lt;split [29/3]&gt; Repeat01 Fold03
+```
+
+```r
+nrow(analysis(cvcars$splits[[1]]))
+```
+
+```
+## [1] 28
+```
+
+```r
+nrow(assessment(cvcars$splits[[1]]))
+```
+
+```
+## [1] 4
+```
+]
+
+---
+
+class: separator, middle
+
+# Regularized Regression and Variable Selection
+
+## What to do when you have 81 potential predictors?
+
+---
+
+# The Linear Model is Great
+
+`$$Y = \beta_0 + \beta_1 x_1 + \dots + \beta_p x_p$$`
+
+* If we have relatively few parameters `\(p &lt;&lt; n\)` we typically have low variance with the linear model.
+
+* This deteriorates with larger `\(p\)`. With `\(p &gt; n\)` (more parameters than data points) we cannot even compute our `\(\beta\)` with OLS.
+
+* We often look for stars `***` when deciding which variable should be part of a model. Correct only under certain assumptions. 
+
+* Despite `***` we don't discover whether variable `\(x_j\)` is an important predictor of the outcome.
+
+* OLS will never deliver an estimate `\(\beta_j\)` *exactly* zero.
+
+* Example?
+
+---
+
+# 307 predictors for `Sale_Price`
+
+
+```r
+a = AmesHousing::make_ames()  # house price sales
+lma = lm(Sale_Price ~ . , data = a) # include all variables
+broom::tidy(lma) %&gt;% select(p.value) %&gt;% arrange(desc(p.value)) %&gt;%
+  ggplot(aes(x = row_number(.),y = p.value)) + geom_point() + theme_bw() + geom_hline(yintercept = 0.05, color = "red")
+```
+.left-thin[
+* 307 predictors! Which ones to include?
+
+* Wait, we still have **p-values**!
+
+* Can't we just take all predictors with `p &lt; 0.05`?
+
+* why not `p &lt; 0.06`?
+
+* why not `p &lt; 0.07`?
+
+]
+
+.right-wide[
+&lt;img src="09-unsupervised_files/figure-html/unnamed-chunk-12-1.svg" style="display: block; margin: auto;" /&gt;
+]
+
+---
+
+# `AmesHousing`
+
+
+```r
+# from: https://uc-r.github.io/regularized_regression
+# Create training (70%) and 
+# test (30%) sets for the AmesHousing::make_ames() data.
+
+set.seed(123)
+ames_split &lt;- initial_split(a, prop = .7, strata = "Sale_Price")
+ames_train &lt;- training(ames_split)
+ames_test  &lt;- testing(ames_split)
+
+
+# extract model matrix from both: code each factor level as a dummy
+# don't take the intercept ([,-1])
+ames_train_x &lt;- model.matrix(Sale_Price ~ ., ames_train)[, -1]
+ames_train_y &lt;- log(ames_train$Sale_Price)
+
+ames_test_x &lt;- model.matrix(Sale_Price ~ ., ames_test)[, -1]
+ames_test_y &lt;- log(ames_test$Sale_Price)
+
+
+# What is the dimension of of your feature matrix?
+dim(ames_train_x)
+```
+
+```
+## [1] 2053  308
+```
+
+---
+
+# House Price Data: `AmesHousing` Package
+
+.left-thin[
+
+* Lots of multicollinearity among our predictors.
+
+* This will inflate variance of our estimates.
+
+* Here is the correlation matrix of the first 60 predictors:
+
+```r
+ca = cor(ames_train_x[,1:60])
+corrplot::corrplot(ca,
+                   tl.pos = "n")
+```
+
+* Darker colours spell trouble!
+
+]
+
+.right-wide[
+
+&lt;img src="09-unsupervised_files/figure-html/unnamed-chunk-15-1.svg" style="display: block; margin: auto;" /&gt;
+]
+
+
+---
+
+# Regularization: Add a *Penalty*
+
+.pull-left[
+
+* We can add a *penalty* P to the OLS objective:
+    `$$\min SSE + P$$`
+    
+* P will *punish* the algorithm for choosing *too large* parameter values
+
+* Looking closely at P is beyond our scope here.
+
+* But we will show how to use two popular methods.
+
+]
+
+--
+
+.pull-right[
+* Ridge Objective: `\(L_2\)` penalty
+    `$$\min SSE + \lambda \sum_{j=1}^P \beta_j^2$$`
+    
+* `\(\lambda\)` is a *tuning parameter*: `\(\lambda = 0\)` is no penalty.
+
+* Lasso Objective: `\(L_1\)` penalty
+    `$$\min SSE + \lambda \sum_{j=1}^P |\beta_j|$$`
+]
+
+---
+class: separator, middle
+
+# Ridge Regression with the `glmnet` package
+
+---
+
+# Ridge in `AmesHousing`
+
+.pull-left[
+* Parameter `alpha` `\(\in[0,1]\)` governs whether we do *Ridge* or *Lasso*. Ridge with `alpha = 0`.
+
+* Using the `glmnet::glmnet` function by default *standardizes* all regressors
+
+* `glmnet::glmnet` will run for many values of `\(\lambda\)`.
+
+
+```r
+# Apply Ridge regression to ames data
+library(glmnet)
+ames_ridge &lt;- glmnet(
+  x = ames_train_x,
+  y = ames_train_y,
+  alpha = 0
+)
+
+plot(ames_ridge, xvar = "lambda")
+```
+
+]
+
+.pull-right[
+
+&lt;img src="09-unsupervised_files/figure-html/unnamed-chunk-17-1.svg" style="display: block; margin: auto;" /&gt;
+]
+
+
+---
+
+# Ridge in `AmesHousing`
+
+.pull-left[
+* Each line is the point estimate for one regressor at a given `\(\lambda\)`
+
+* All regressors are non-zero, but get arbitrarily small at high `\(\lambda\)`. We compress considerable variation in estimates (remember those are all standardized!)
+
+* So, what's the right `\(\lambda\)` then?
+
+* `\(\lambda\)` is a tuning parameter. 
+
+* Let's do CV to find out the best `\(\lambda\)`.
+
+
+
+]
+
+.pull-right[
+
+&lt;img src="09-unsupervised_files/figure-html/unnamed-chunk-18-1.svg" style="display: block; margin: auto;" /&gt;
+]
+
+---
+
+# Tuning Ridge
+
+.pull-left[
+* Remember what we said about **Overfitting**: there is a sweet spot that balances flexibility (here: many regressors) and interpretability (here: few regressors).
+
+* Let's do k-fold CV to compute our test MSE, built in with `glmnet::cv.glmnet`:
+
+
+```r
+# Apply CV Ridge regression to ames data
+ames_ridge &lt;- cv.glmnet(
+  x = ames_train_x,
+  y = ames_train_y,
+  alpha = 0
+)
+
+# plot results
+plot(ames_ridge)
+```
+
+]
+
+.pull-right[
+
+&lt;img src="09-unsupervised_files/figure-html/unnamed-chunk-20-1.svg" style="display: block; margin: auto;" /&gt;
+]
+
+
+---
+
+# Tuning Ridge
+
+.pull-left[
+* The dashed vertical lines mark the minimum MSE and the largest `\(\lambda\)` within one std error of this minimum (to the right of the first lines).
+
+* We would choose a lambda withing those two dashed lines.
+
+* Remember that this keeps all variables.
+
+]
+
+.pull-right[
+
+&lt;img src="09-unsupervised_files/figure-html/unnamed-chunk-21-1.svg" style="display: block; margin: auto;" /&gt;
+]
+
+
+---
+
+# lasso (*least absolute shrinkage and selection operator*)
+
+.pull-left[
+* Lasso with `alpha = 1`.
+
+* You will see that this forces some estimates to zero.
+
+* Hence it reduces the number of variables in the model
+
+
+```r
+ames_lasso &lt;- glmnet(
+  x = ames_train_x,
+  y = ames_train_y,
+  alpha = 1
+)
+# plot results
+plot(ames_lasso, xvar = "lambda")
+```
+
+]
+
+.pull-right[
+
+&lt;img src="09-unsupervised_files/figure-html/unnamed-chunk-23-1.svg" style="display: block; margin: auto;" /&gt;
+]
+
+---
+
+# lasso (*least absolute shrinkage and selection operator*)
+
+.pull-left[
+* Huge variation in estimates gets shrunken.
+
+* The top bar of the graph shows number of active variables for each `\(\lambda\)`.
+
+* Again: What's the right `\(\lambda\)` then?
+
+* Again: let's look at the test MSE!
+
+]
+
+.pull-right[
+
+&lt;img src="09-unsupervised_files/figure-html/unnamed-chunk-24-1.svg" style="display: block; margin: auto;" /&gt;
+]
+
+---
+
+# Tuning Lasso
+
+.pull-left[
+* Let's use the same function as before.
+
+* Let's do k-fold CV to compute our test MSE, built in with `glmnet::cv.glmnet`:
+
+
+```r
+ames_lasso &lt;- cv.glmnet(
+  x = ames_train_x,
+  y = ames_train_y,
+  alpha = 1
+)
+# plot results
+plot(ames_lasso)
+```
+
+]
+
+.pull-right[
+
+&lt;img src="09-unsupervised_files/figure-html/unnamed-chunk-26-1.svg" style="display: block; margin: auto;" /&gt;
+]
+
+---
+
+# Tuning Lasso
+
+.pull-left[
+
+```r
+min(ames_lasso$cvm)       # minimum MSE
+```
+
+```
+## [1] 0.01908478
+```
+
+```r
+ames_lasso$lambda.min     # lambda for this min MSE
+```
+
+```
+## [1] 0.002994143
+```
+
+```r
+# 1 st.error of min MSE
+ames_lasso$cvm[ames_lasso$lambda == ames_lasso$lambda.1se]  
+```
+
+```
+## [1] 0.02176142
+```
+
+```r
+ames_lasso$lambda.1se  # lambda for this MSE
+```
+
+```
+## [1] 0.01326591
+```
+
+* So: at MSE-minimizing `\(\lambda\)`, we went down to 160 variables.
+
+* Going 1 SE to the right incurs slightly higher MSE, but important reduction in variables!
+]
+
+.pull-right[
+
+&lt;img src="09-unsupervised_files/figure-html/unnamed-chunk-28-1.svg" style="display: block; margin: auto;" /&gt;
+]
+
+
+---
+
+# Lasso predictors at optimal MSEs
+
+.pull-left[
+* Let's look again at coef estimates
+
+* The red dashed lines are minimal `\(\lambda\)` and `lambda.1se`
+
+* Depending on your task, the second line may be acceptable.
+]
+
+.pull-right[
+&lt;img src="09-unsupervised_files/figure-html/unnamed-chunk-29-1.svg" style="display: block; margin: auto;" /&gt;
+]
+
+---
+
+# lasso vars
+
+.pull-left[
+* So, the lasso really *selects* variables.
+
+* Which ones are the most influental variables then?
+
+* Remember, this is about finding the best *predictive* model.
+
+]
+
+.pull-right[
+
+&lt;img src="09-unsupervised_files/figure-html/unnamed-chunk-30-1.svg" style="display: block; margin: auto;" /&gt;
+]
+
+---
+
+class: separator, middle
+
+# Unsupervised Methods
+
+
+---
+
+
+# Unsupervised Methods
+
+* Remember: in this class of methods we don't have a designated *output* `\(y\)` for our *input* variables `\(x\)`.
+
+* We will talk about Principal Component Analysis (PCA)
+
+* And about Clustering methods.
+
+* Both of those are useful to *summarise* high-dimensional datasets. 
+
+---
+background-image: url(../../img/clustering/c1.png)
+background-size: contain
+layout: false
+
+
+---
+background-image: url(../../img/clustering/c2.png)
+background-size: contain
+
+
+---
+background-image: url(../../img/clustering/c3.png)
+background-size: contain
+
+
+---
+background-image: url(../../img/clustering/c4.png)
+background-size: contain
+
+
+---
+background-image: url(../../img/clustering/c5.png)
+background-size: contain
+
+
+---
+background-image: url(../../img/clustering/c6.png)
+background-size: contain
+
+
+---
+background-image: url(../../img/clustering/c7.png)
+background-size: contain
+
+
+---
+background-image: url(../../img/clustering/c8.png)
+background-size: contain
+
+
+---
+background-image: url(../../img/clustering/c9.png)
+background-size: contain
+
+
+---
+background-image: url(../../img/clustering/c10.png)
+background-size: contain
+
+---
+class: middle
+
+# Now Try Yourself!
+
+## [https://www.naftaliharris.com/blog/visualizing-k-means-clustering/](https://www.naftaliharris.com/blog/visualizing-k-means-clustering/)
+
+
+
+
+---
+
+# `tidymodels` k-means clustering
+
+
+```r
+library(tidymodels)
+
+set.seed(27)
+
+centers &lt;- tibble(
+  cluster = factor(1:3), 
+  num_points = c(100, 150, 50),  # number points in each cluster
+  x1 = c(5, 0, -3),              # x1 coordinate of cluster center
+  x2 = c(-1, 1, -2)              # x2 coordinate of cluster center
+)
+
+labelled_points &lt;- 
+  centers %&gt;%
+  mutate(
+    x1 = map2(num_points, x1, rnorm),
+    x2 = map2(num_points, x2, rnorm)
+  ) %&gt;% 
+  select(-num_points) %&gt;% 
+  unnest(cols = c(x1, x2))
+
+ggplot(labelled_points, aes(x1, x2, color = cluster)) +
+  geom_point(alpha = 0.3)
+```
+
+---
+
+# `tidymodels` k-means clustering
+
+&lt;img src="09-unsupervised_files/figure-html/unnamed-chunk-32-1.svg" style="display: block; margin: auto;" /&gt;
+
+
+---
+
+# base `R`: `kmeans`
+
+
+```r
+points &lt;- 
+  labelled_points %&gt;% 
+  select(-cluster)
+
+kclust &lt;- kmeans(points, centers = 3)
+kclust
+```
+
+```
+## K-means clustering with 3 clusters of sizes 148, 51, 101
+## 
+## Cluster means:
+##            x1        x2
+## 1  0.08853475  1.045461
+## 2 -3.14292460 -2.000043
+## 3  5.00401249 -1.045811
+## 
+## Clustering vector:
+##   [1] 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3
+##  [38] 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3
+##  [75] 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 1 1 1 1 1 1 1 1 1 1 1
+## [112] 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+## [149] 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+## [186] 1 1 1 1 1 1 1 1 1 1 1 1 1 3 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+## [223] 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 2 1 1 1 1 1 1 2 2 2 2 2 2 2 2 2
+## [260] 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2
+## [297] 2 2 2 2
+## 
+## Within cluster sum of squares by cluster:
+## [1] 298.9415 108.8112 243.2092
+##  (between_SS / total_SS =  82.5 %)
+## 
+## Available components:
+## 
+## [1] "cluster"      "centers"      "totss"        "withinss"     "tot.withinss"
+## [6] "betweenss"    "size"         "iter"         "ifault"
+```
+
+---
+
+# How many clusters `k` to choose?
+
+
+```r
+kclusts &lt;- 
+  tibble(k = 1:9) %&gt;%
+  mutate(
+    kclust = map(k, ~kmeans(points, .x)),
+    tidied = map(kclust, tidy),
+    glanced = map(kclust, glance),
+    augmented = map(kclust, augment, points)
+  )
+kclusts
+```
+
+```
+## # A tibble: 9 x 5
+##       k kclust   tidied           glanced          augmented         
+##   &lt;int&gt; &lt;list&gt;   &lt;list&gt;           &lt;list&gt;           &lt;list&gt;            
+## 1     1 &lt;kmeans&gt; &lt;tibble [1 × 5]&gt; &lt;tibble [1 × 4]&gt; &lt;tibble [300 × 3]&gt;
+## 2     2 &lt;kmeans&gt; &lt;tibble [2 × 5]&gt; &lt;tibble [1 × 4]&gt; &lt;tibble [300 × 3]&gt;
+## 3     3 &lt;kmeans&gt; &lt;tibble [3 × 5]&gt; &lt;tibble [1 × 4]&gt; &lt;tibble [300 × 3]&gt;
+## 4     4 &lt;kmeans&gt; &lt;tibble [4 × 5]&gt; &lt;tibble [1 × 4]&gt; &lt;tibble [300 × 3]&gt;
+## 5     5 &lt;kmeans&gt; &lt;tibble [5 × 5]&gt; &lt;tibble [1 × 4]&gt; &lt;tibble [300 × 3]&gt;
+## 6     6 &lt;kmeans&gt; &lt;tibble [6 × 5]&gt; &lt;tibble [1 × 4]&gt; &lt;tibble [300 × 3]&gt;
+## 7     7 &lt;kmeans&gt; &lt;tibble [7 × 5]&gt; &lt;tibble [1 × 4]&gt; &lt;tibble [300 × 3]&gt;
+## 8     8 &lt;kmeans&gt; &lt;tibble [8 × 5]&gt; &lt;tibble [1 × 4]&gt; &lt;tibble [300 × 3]&gt;
+## 9     9 &lt;kmeans&gt; &lt;tibble [9 × 5]&gt; &lt;tibble [1 × 4]&gt; &lt;tibble [300 × 3]&gt;
+```
+
+---
+
+# How many clusters `k` to choose?
+
+
+```r
+clusters &lt;- 
+  kclusts %&gt;%
+  unnest(cols = c(tidied))
+
+assignments &lt;- 
+  kclusts %&gt;% 
+  unnest(cols = c(augmented))
+
+clusterings &lt;- 
+  kclusts %&gt;%
+  unnest(cols = c(glanced))
+```
+
+
+
+---
+
+# How many clusters `k` to choose?
+
+.pull-left[
+
+```r
+p1 &lt;- 
+  ggplot(assignments, aes(x = x1, y = x2)) +
+  geom_point(aes(color = .cluster), alpha = 0.8) + 
+  facet_wrap(~ k)
+```
+]
+
+.pull-right[
+&lt;img src="09-unsupervised_files/figure-html/unnamed-chunk-37-1.svg" style="display: block; margin: auto;" /&gt;
+
+]
+---
+
+# How many clusters `k` to choose? The *Elbow* Method
+
+
+```r
+ggplot(clusterings, aes(k, tot.withinss)) +
+  geom_line() +
+  geom_point()
+```
+
+&lt;img src="09-unsupervised_files/figure-html/unnamed-chunk-38-1.svg" style="display: block; margin: auto;" /&gt;
+
+
+
+---
+
+
+class: title-slide-final, middle
+background-image: url(../../img/logo/ScPo-econ.png)
+background-size: 250px
+background-position: 9% 19%
+
+# END
+
+
+
+
+|                                                                                                            |                                   |
+| :--------------------------------------------------------------------------------------------------------- | :-------------------------------- |
+| &lt;a href="mailto:florian.oswald@sciencespo.fr"&gt;.ScPored[&lt;i class="fa fa-paper-plane fa-fw"&gt;&lt;/i&gt;]               | florian.oswald@sciencespo.fr       |
+| &lt;a href="https://github.com/ScPoEcon/Advanced-Metrics-slides"&gt;.ScPored[&lt;i class="fa fa-link fa-fw"&gt;&lt;/i&gt;] | Slides |
+| &lt;a href="https://scpoecon.github.io/ScPoEconometrics"&gt;.ScPored[&lt;i class="fa fa-link fa-fw"&gt;&lt;/i&gt;] | Book |
+| &lt;a href="http://twitter.com/ScPoEcon"&gt;.ScPored[&lt;i class="fa fa-twitter fa-fw"&gt;&lt;/i&gt;]                          | @ScPoEcon                         |
+| &lt;a href="http://github.com/ScPoEcon"&gt;.ScPored[&lt;i class="fa fa-github fa-fw"&gt;&lt;/i&gt;]                          | @ScPoEcon                       |
+
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script src="../../js/ru_xaringan.js"></script>
+<script>var slideshow = remark.create({
+"highlightStyle": "github",
+"highlightLines": true,
+"countIncrementalSlides": false,
+"ratio": "16:9"
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>

@@ -1,0 +1,1018 @@
+---
+title: "ScPoEconometrics: Advanced"
+subtitle: "Statistical Learning 2"
+author: "Florian Oswald"
+date: "SciencesPo Paris </br> `r Sys.Date()`"
+output:
+  xaringan::moon_reader:
+    lib_dir: libs
+    css: [default, "../../css/scpo.css", "../../css/scpo-fonts.css"]
+    nature:
+      beforeInit: ["../../js/ru_xaringan.js"]
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+      ratio: "16:9"
+    includes:
+      in_header: ["../../libs/partials/header.html"]
+---
+
+layout: true
+
+<div class="my-footer"><img src="../../img/logo/ScPo-shield.png" style="height: 60px;"/></div> 
+
+---
+
+```{r setup, include=FALSE,warning=FALSE,message=FALSE}
+options(htmltools.dir.version = FALSE)
+knitr::opts_chunk$set(
+  message = FALSE,
+  warning = FALSE,
+  dev = "svg",
+  cache = TRUE,
+  fig.align = "center"
+  #fig.width = 11,
+  #fig.height = 5
+)
+
+# define vars
+om = par("mar")
+lowtop = c(om[1],om[2],0.1,om[4])
+
+# bootstrap samples
+N <- 200
+
+```
+
+# Resampling Methods
+
+.pull-left[
+
+* We already encountered the **bootstrap**: we resample repeatedly *with replacement* from our analysis data.
+
+* We'll also learn about **cross validation** today, which is a related idea.
+
+* The bootstratp is useful assess model uncertainty.
+
+* Cross Validation is used assess model accuracy. 
+
+]
+
+--
+
+.pull-right[
+* Remember how **bootstrapping** works: We just pretend that our sample *is* the full population.
+
+* And we repeatedly draw from this randomly, with replacement.
+
+* This will create a sampling distribution, which *closely* approximates the true sampling distribution!
+
+* We can use this to compute confidence intervals when no closed form exists or illustrate uncertainty.
+]
+
+
+---
+
+# Do The Bootstrap!
+
+.left-thin[
+
+* The `tidymodels` suite of packages is amazing here. I copied most of the code from [them](https://www.tidymodels.org/learn/statistics/bootstrap/).
+
+* Let's look at fitting a *nonlinear* least squares model to this data:
+
+```{r,eval = FALSE}
+library(tidymodels)
+ggplot(mtcars, aes(mpg,wt)) +
+  geom_point()
+```
+]
+
+.right-wide[
+```{r,echo = FALSE,fig.height=4,message = FALSE}
+library(tidymodels)
+ggplot(mtcars, aes(mpg,wt)) +
+  geom_point() + theme_bw() +ggtitle("Cars Again")
+```
+]
+
+---
+
+# Non-linear Least Squares (NLS) for Cars
+
+
+.left-thin[
+<br>
+
+* Remember: OLS required *linear* parameters.
+
+* NLS relaxes that:$$y_i = f(x_i,\beta) + e_i$$
+
+* Again want the $\beta$'s. 
+
+* $f$ is known!
+
+]
+
+.right-wide[
+```{r, echo=TRUE,fig.height = 3.5}
+nlsfit <- nls(mpg ~ k / wt + b, 
+              mtcars, 
+              start = list(k = 1, b = 0))
+
+ggplot(mtcars, aes(wt, mpg)) +
+    geom_point() +
+    geom_line(aes(y = predict(nlsfit))) + theme_bw() + ggtitle("Cars with NLS Fit")
+```
+]
+
+---
+
+# Bootstrapping the NLS models
+
+.left-thin[
+
+1. Let's create `r N` bootstrap samples.
+
+2. Estimate our NLS model on each.
+
+3. Get coefficients from each.
+
+4. Assess their variation.
+]
+
+.right-wide[
+```{r}
+# 1.
+boots <- bootstraps(mtcars, times = N, apparent = TRUE)
+
+# 2. a) create a wrapper for nls
+fit_nls_on_bootstrap <- function(split) {
+    nls(mpg ~ k / wt + b, analysis(split), start = list(k = 1, b = 0))
+}
+
+# 2. b) map wrapper on to each bootstrap sample
+boot_models <-
+  boots %>% 
+  mutate(model = map(splits, fit_nls_on_bootstrap),
+         coef_info = map(model, tidy))
+# 3. 
+boot_coefs <- 
+  boot_models %>% 
+  unnest(coef_info)
+```
+]
+
+---
+
+# Bootstrapping the NLS models: Using the `rsample` package
+
+.left-thin[
+
+* `rsample` functions *split* datasets. `bootstrap` draws total number of observations for `analysis` (i.e. for *training*)
+
+* `boot_coefs` has estimates for each bootstrap sample.
+
+]
+
+.right-wide[
+```{r}
+head(boots)  
+
+head(boot_coefs)
+```
+]
+
+
+
+---
+
+
+# Confidence Intervals
+
+.left-thin[
+
+* We can now easily compute and plot bootstrap CIs!
+
+* Remember: *percentile method* just takes 2.5 and 97.5 quantiles of bootstrap sampling distribution as bounds of CI.
+
+]
+
+.right-wide[
+```{r,fig.height=3}
+percentile_intervals <- int_pctl(boot_models, coef_info)
+ggplot(boot_coefs, aes(estimate)) +
+  geom_histogram(bins = 30) +
+  facet_wrap( ~ term, scales = "free") +
+  geom_vline(aes(xintercept = .lower), data = percentile_intervals, col = "blue") +
+  geom_vline(aes(xintercept = .upper), data = percentile_intervals, col = "blue")
+```
+]
+
+
+
+---
+
+# Illustrate More Uncertainty
+
+.left-thin[
+
+* It's also easy to illustrate uncertainty in fit with this.
+
+* Let's get predicted values with `augment` from our models.
+
+```{r}
+boot_aug <- 
+  boot_models %>% 
+  sample_n(200) %>% 
+  mutate(augmented = 
+           map(model, augment)) %>% 
+  unnest(augmented)
+```
+
+]
+
+.right-wide[
+```{r,fig.height=4}
+ggplot(boot_aug, aes(wt, mpg)) +
+  geom_line(aes(y = .fitted, group = id), alpha = .1, col = "red") +
+  geom_point() + theme_bw()
+```
+]
+
+
+
+---
+
+# Cross Validation
+
+.pull-left[
+
+* Last week we encountered the test MSE.
+
+* In simulation studies, we can compute it, but in real life? It's much harder to obtain a true test data set.
+
+* What we can do in practice, however, is to **hold out** part of our data for testing purposes.
+
+* We just set it aside at the beginning and don't use it for training.
+]
+
+.pull-right[
+
+Several Approaches:
+
+1. Validation Set
+
+2. Leave-one-out cross validation (LOOCV)
+
+3. k-fold Cross Validation (k-CV)
+
+]
+
+---
+
+# K-fold Cross Validation (k-CV)
+
+.pull-left[
+* Randomly divide your data into $k$ groups of equal size.
+
+* train model on all but last groups (*folds*), compute MSE on last fold.
+
+* train model on all but penultimat fold, compute MSE there, etc
+
+* The *k-fold CV* is then $$CV_{(k)} = \frac{1}{k} \sum_{i=1}^k \text{MSE}_i$$
+]
+
+--
+
+.pull-right[
+
+* We have to fit the model $k$ times here. 
+
+* Previous methods (LOOCV) are much more costly in terms of computing time.
+
+* In practice one often chooses $k=5$ or $k=10$.
+
+* Let's look again at the `rsample` package as to how to set this up!
+]
+
+---
+
+# `rsample` package again
+
+.pull-left[
+## Splits for Bootstrap Samples
+
+```{r}
+library(rsample) # already loaded...
+bcars <- bootstraps(mtcars, times = 3)
+head(bcars,n=3)
+nrow(analysis(bcars$splits[[1]]))
+```
+]
+
+.pull-right[
+## Splits for Testing/Training
+
+```{r}
+set.seed(1221)
+cvcars <- vfold_cv(mtcars, v = 10, repeats = 10)
+head(cvcars,n=3)
+nrow(analysis(cvcars$splits[[1]]))
+nrow(assessment(cvcars$splits[[1]]))
+```
+]
+
+---
+
+class: separator, middle
+
+# Regularized Regression and Variable Selection
+
+## What to do when you have 81 potential predictors?
+
+---
+
+# The Linear Model is Great
+
+$$Y = \beta_0 + \beta_1 x_1 + \dots + \beta_p x_p$$
+
+* If we have relatively few parameters $p << n$ we typically have low variance with the linear model.
+
+* This deteriorates with larger $p$. With $p > n$ (more parameters than data points) we cannot even compute our $\beta$ with OLS.
+
+* We often look for stars `***` when deciding which variable should be part of a model. Correct only under certain assumptions. 
+
+* Despite `***` we don't discover whether variable $x_j$ is an important predictor of the outcome.
+
+* OLS will never deliver an estimate $\beta_j$ *exactly* zero.
+
+* Example?
+
+---
+
+# 307 predictors for `Sale_Price`
+
+```{r, eval = FALSE}
+a = AmesHousing::make_ames()  # house price sales
+lma = lm(Sale_Price ~ . , data = a) # include all variables
+broom::tidy(lma) %>% select(p.value) %>% arrange(desc(p.value)) %>%
+  ggplot(aes(x = row_number(.),y = p.value)) + geom_point() + theme_bw() + geom_hline(yintercept = 0.05, color = "red")
+```
+.left-thin[
+* 307 predictors! Which ones to include?
+
+* Wait, we still have **p-values**!
+
+* Can't we just take all predictors with `p < 0.05`?
+
+* why not `p < 0.06`?
+
+* why not `p < 0.07`?
+
+]
+
+.right-wide[
+```{r, echo = FALSE,fig.height = 4}
+a = AmesHousing::make_ames()
+lma = lm(Sale_Price ~ . , data = a) # include all variables
+broom::tidy(lma) %>% select(p.value) %>% arrange(desc(p.value)) %>%
+  ggplot(aes(x = row_number(.),y = p.value)) + geom_point() + theme_bw()+ geom_hline(yintercept = 0.05, color = "red")
+```
+]
+
+---
+
+# `AmesHousing`
+
+```{r}
+# from: https://uc-r.github.io/regularized_regression
+# Create training (70%) and 
+# test (30%) sets for the AmesHousing::make_ames() data.
+
+set.seed(123)
+ames_split <- initial_split(a, prop = .7, strata = "Sale_Price")
+ames_train <- training(ames_split)
+ames_test  <- testing(ames_split)
+
+
+# extract model matrix from both: code each factor level as a dummy
+# don't take the intercept ([,-1])
+ames_train_x <- model.matrix(Sale_Price ~ ., ames_train)[, -1]
+ames_train_y <- log(ames_train$Sale_Price)
+
+ames_test_x <- model.matrix(Sale_Price ~ ., ames_test)[, -1]
+ames_test_y <- log(ames_test$Sale_Price)
+
+
+# What is the dimension of of your feature matrix?
+dim(ames_train_x)
+
+```
+
+---
+
+# House Price Data: `AmesHousing` Package
+
+.left-thin[
+
+* Lots of multicollinearity among our predictors.
+
+* This will inflate variance of our estimates.
+
+* Here is the correlation matrix of the first 60 predictors:
+```{r,eval = FALSE}
+ca = cor(ames_train_x[,1:60])
+corrplot::corrplot(ca,
+                   tl.pos = "n")
+```
+
+* Darker colours spell trouble!
+
+]
+
+.right-wide[
+
+```{r,echo = FALSE,fig.height = 5}
+ca = cor(ames_train_x[,1:60])
+corrplot::corrplot(ca,addgrid.col = FALSE,tl.pos = "n")
+```
+]
+
+
+---
+
+# Regularization: Add a *Penalty*
+
+.pull-left[
+
+* We can add a *penalty* P to the OLS objective:
+    $$\min SSE + P$$
+    
+* P will *punish* the algorithm for choosing *too large* parameter values
+
+* Looking closely at P is beyond our scope here.
+
+* But we will show how to use two popular methods.
+
+]
+
+--
+
+.pull-right[
+* Ridge Objective: $L_2$ penalty
+    $$\min SSE + \lambda \sum_{j=1}^P \beta_j^2$$
+    
+* $\lambda$ is a *tuning parameter*: $\lambda = 0$ is no penalty.
+
+* Lasso Objective: $L_1$ penalty
+    $$\min SSE + \lambda \sum_{j=1}^P |\beta_j|$$
+]
+
+---
+class: separator, middle
+
+# Ridge Regression with the `glmnet` package
+
+---
+
+# Ridge in `AmesHousing`
+
+.pull-left[
+* Parameter `alpha` $\in[0,1]$ governs whether we do *Ridge* or *Lasso*. Ridge with `alpha = 0`.
+
+* Using the `glmnet::glmnet` function by default *standardizes* all regressors
+
+* `glmnet::glmnet` will run for many values of $\lambda$.
+
+```{r,eval = FALSE}
+# Apply Ridge regression to ames data
+library(glmnet)
+ames_ridge <- glmnet(
+  x = ames_train_x,
+  y = ames_train_y,
+  alpha = 0
+)
+
+plot(ames_ridge, xvar = "lambda")
+```
+
+]
+
+.pull-right[
+
+```{r,echo = FALSE,fig.height=7}
+# Apply Ridge regression to ames data
+library(glmnet)
+ames_ridge <- glmnet(
+  x = ames_train_x,
+  y = ames_train_y,
+  alpha = 0
+)
+
+plot(ames_ridge, xvar = "lambda")
+```
+]
+
+
+---
+
+# Ridge in `AmesHousing`
+
+.pull-left[
+* Each line is the point estimate for one regressor at a given $\lambda$
+
+* All regressors are non-zero, but get arbitrarily small at high $\lambda$. We compress considerable variation in estimates (remember those are all standardized!)
+
+* So, what's the right $\lambda$ then?
+
+* $\lambda$ is a tuning parameter. 
+
+* Let's do CV to find out the best $\lambda$.
+
+
+
+]
+
+.pull-right[
+
+```{r,echo = FALSE,fig.height=7}
+plot(ames_ridge, xvar = "lambda")
+```
+]
+
+---
+
+# Tuning Ridge
+
+.pull-left[
+* Remember what we said about **Overfitting**: there is a sweet spot that balances flexibility (here: many regressors) and interpretability (here: few regressors).
+
+* Let's do k-fold CV to compute our test MSE, built in with `glmnet::cv.glmnet`:
+
+```{r,eval = FALSE}
+# Apply CV Ridge regression to ames data
+ames_ridge <- cv.glmnet(
+  x = ames_train_x,
+  y = ames_train_y,
+  alpha = 0
+)
+
+# plot results
+plot(ames_ridge)
+```
+
+]
+
+.pull-right[
+
+```{r,echo = FALSE,fig.height=7}
+# Apply CV Ridge regression to ames data
+ames_ridge <- cv.glmnet(
+  x = ames_train_x,
+  y = ames_train_y,
+  alpha = 0
+)
+
+# plot results
+plot(ames_ridge)
+```
+]
+
+
+---
+
+# Tuning Ridge
+
+.pull-left[
+* The dashed vertical lines mark the minimum MSE and the largest $\lambda$ within one std error of this minimum (to the right of the first lines).
+
+* We would choose a lambda withing those two dashed lines.
+
+* Remember that this keeps all variables.
+
+]
+
+.pull-right[
+
+```{r,echo = FALSE,fig.height=7}
+# plot results
+plot(ames_ridge)
+```
+]
+
+
+---
+
+# lasso (*least absolute shrinkage and selection operator*)
+
+.pull-left[
+* Lasso with `alpha = 1`.
+
+* You will see that this forces some estimates to zero.
+
+* Hence it reduces the number of variables in the model
+
+```{r,eval = FALSE}
+ames_lasso <- glmnet(
+  x = ames_train_x,
+  y = ames_train_y,
+  alpha = 1
+)
+# plot results
+plot(ames_lasso, xvar = "lambda")
+```
+
+]
+
+.pull-right[
+
+```{r,echo = FALSE,fig.height=7}
+ames_lasso <- glmnet(
+  x = ames_train_x,
+  y = ames_train_y,
+  alpha = 1
+)
+# plot results
+plot(ames_lasso, xvar = "lambda")
+```
+]
+
+---
+
+# lasso (*least absolute shrinkage and selection operator*)
+
+.pull-left[
+* Huge variation in estimates gets shrunken.
+
+* The top bar of the graph shows number of active variables for each $\lambda$.
+
+* Again: What's the right $\lambda$ then?
+
+* Again: let's look at the test MSE!
+
+]
+
+.pull-right[
+
+```{r,echo = FALSE,fig.height=7}
+
+plot(ames_lasso, xvar = "lambda")
+```
+]
+
+---
+
+# Tuning Lasso
+
+.pull-left[
+* Let's use the same function as before.
+
+* Let's do k-fold CV to compute our test MSE, built in with `glmnet::cv.glmnet`:
+
+```{r,eval = FALSE}
+ames_lasso <- cv.glmnet(
+  x = ames_train_x,
+  y = ames_train_y,
+  alpha = 1
+)
+# plot results
+plot(ames_lasso)
+```
+
+]
+
+.pull-right[
+
+```{r,echo = FALSE,fig.height=7}
+ames_lasso <- cv.glmnet(
+  x = ames_train_x,
+  y = ames_train_y,
+  alpha = 1
+)
+# plot results
+plot(ames_lasso)
+```
+]
+
+---
+
+# Tuning Lasso
+
+.pull-left[
+```{r}
+min(ames_lasso$cvm)       # minimum MSE
+ames_lasso$lambda.min     # lambda for this min MSE
+
+# 1 st.error of min MSE
+ames_lasso$cvm[ames_lasso$lambda == ames_lasso$lambda.1se]  
+ames_lasso$lambda.1se  # lambda for this MSE
+```
+
+* So: at MSE-minimizing $\lambda$, we went down to 160 variables.
+
+* Going 1 SE to the right incurs slightly higher MSE, but important reduction in variables!
+]
+
+.pull-right[
+
+```{r,echo = FALSE,fig.height=7}
+# plot results
+plot(ames_lasso)
+```
+]
+
+
+---
+
+# Lasso predictors at optimal MSEs
+
+.pull-left[
+* Let's look again at coef estimates
+
+* The red dashed lines are minimal $\lambda$ and `lambda.1se`
+
+* Depending on your task, the second line may be acceptable.
+]
+
+.pull-right[
+```{r,echo = FALSE,fig.height=7}
+ames_lasso_min <- glmnet(
+  x = ames_train_x,
+  y = ames_train_y,
+  alpha = 1
+)
+
+plot(ames_lasso_min, xvar = "lambda")
+abline(v = log(ames_lasso$lambda.min), col = "red", lty = "dashed")
+abline(v = log(ames_lasso$lambda.1se), col = "red", lty = "dashed")
+```
+]
+
+---
+
+# lasso vars
+
+.pull-left[
+* So, the lasso really *selects* variables.
+
+* Which ones are the most influental variables then?
+
+* Remember, this is about finding the best *predictive* model.
+
+]
+
+.pull-right[
+
+```{r,echo = FALSE, fig.height=9}
+coef(ames_lasso, s = "lambda.1se") %>%
+  tidy() %>%
+  filter(row != "(Intercept)") %>%
+  ggplot(aes(value, reorder(row, value), color = value > 0)) +
+  geom_point(show.legend = FALSE) +
+  ggtitle("Influential variables") +
+  xlab("Coefficient") +
+  ylab(NULL)
+```
+]
+
+---
+
+class: separator, middle
+
+# Unsupervised Methods
+
+
+---
+
+
+# Unsupervised Methods
+
+* Remember: in this class of methods we don't have a designated *output* $y$ for our *input* variables $x$.
+
+* We will talk about Principal Component Analysis (PCA)
+
+* And about Clustering methods.
+
+* Both of those are useful to *summarise* high-dimensional datasets. 
+
+---
+background-image: url(../../img/clustering/c1.png)
+background-size: contain
+layout: false
+
+
+---
+background-image: url(../../img/clustering/c2.png)
+background-size: contain
+
+
+---
+background-image: url(../../img/clustering/c3.png)
+background-size: contain
+
+
+---
+background-image: url(../../img/clustering/c4.png)
+background-size: contain
+
+
+---
+background-image: url(../../img/clustering/c5.png)
+background-size: contain
+
+
+---
+background-image: url(../../img/clustering/c6.png)
+background-size: contain
+
+
+---
+background-image: url(../../img/clustering/c7.png)
+background-size: contain
+
+
+---
+background-image: url(../../img/clustering/c8.png)
+background-size: contain
+
+
+---
+background-image: url(../../img/clustering/c9.png)
+background-size: contain
+
+
+---
+background-image: url(../../img/clustering/c10.png)
+background-size: contain
+
+---
+class: middle
+
+# Now Try Yourself!
+
+## [https://www.naftaliharris.com/blog/visualizing-k-means-clustering/](https://www.naftaliharris.com/blog/visualizing-k-means-clustering/)
+
+
+
+
+---
+
+# `tidymodels` k-means clustering
+
+```{r,eval = FALSE}
+library(tidymodels)
+
+set.seed(27)
+
+centers <- tibble(
+  cluster = factor(1:3), 
+  num_points = c(100, 150, 50),  # number points in each cluster
+  x1 = c(5, 0, -3),              # x1 coordinate of cluster center
+  x2 = c(-1, 1, -2)              # x2 coordinate of cluster center
+)
+
+labelled_points <- 
+  centers %>%
+  mutate(
+    x1 = map2(num_points, x1, rnorm),
+    x2 = map2(num_points, x2, rnorm)
+  ) %>% 
+  select(-num_points) %>% 
+  unnest(cols = c(x1, x2))
+
+ggplot(labelled_points, aes(x1, x2, color = cluster)) +
+  geom_point(alpha = 0.3)
+```
+
+---
+
+# `tidymodels` k-means clustering
+
+```{r,echo = FALSE,fig.height=5,fig.width = 9}
+library(tidymodels)
+
+set.seed(27)
+
+centers <- tibble(
+  cluster = factor(1:3), 
+  num_points = c(100, 150, 50),  # number points in each cluster
+  x1 = c(5, 0, -3),              # x1 coordinate of cluster center
+  x2 = c(-1, 1, -2)              # x2 coordinate of cluster center
+)
+
+labelled_points <- 
+  centers %>%
+  mutate(
+    x1 = map2(num_points, x1, rnorm),
+    x2 = map2(num_points, x2, rnorm)
+  ) %>% 
+  select(-num_points) %>% 
+  unnest(cols = c(x1, x2))
+
+ggplot(labelled_points, aes(x1, x2, color = cluster)) +
+  geom_point(alpha = 0.3)
+```
+
+
+---
+
+# base `R`: `kmeans`
+
+```{r}
+points <- 
+  labelled_points %>% 
+  select(-cluster)
+
+kclust <- kmeans(points, centers = 3)
+kclust
+```
+
+---
+
+# How many clusters `k` to choose?
+
+```{r}
+kclusts <- 
+  tibble(k = 1:9) %>%
+  mutate(
+    kclust = map(k, ~kmeans(points, .x)),
+    tidied = map(kclust, tidy),
+    glanced = map(kclust, glance),
+    augmented = map(kclust, augment, points)
+  )
+kclusts
+```
+
+---
+
+# How many clusters `k` to choose?
+
+```{r}
+clusters <- 
+  kclusts %>%
+  unnest(cols = c(tidied))
+
+assignments <- 
+  kclusts %>% 
+  unnest(cols = c(augmented))
+
+clusterings <- 
+  kclusts %>%
+  unnest(cols = c(glanced))
+```
+
+
+
+---
+
+# How many clusters `k` to choose?
+
+.pull-left[
+```{r}
+p1 <- 
+  ggplot(assignments, aes(x = x1, y = x2)) +
+  geom_point(aes(color = .cluster), alpha = 0.8) + 
+  facet_wrap(~ k)
+```
+]
+
+.pull-right[
+```{r,echo = FALSE,fig.height=7}
+p1
+```
+
+]
+---
+
+# How many clusters `k` to choose? The *Elbow* Method
+
+```{r,fig.height=3}
+ggplot(clusterings, aes(k, tot.withinss)) +
+  geom_line() +
+  geom_point()
+```
+
+
+
+---
+
+
+class: title-slide-final, middle
+background-image: url(../../img/logo/ScPo-econ.png)
+background-size: 250px
+background-position: 9% 19%
+
+# END
+
+
+
+
+|                                                                                                            |                                   |
+| :--------------------------------------------------------------------------------------------------------- | :-------------------------------- |
+| <a href="mailto:florian.oswald@sciencespo.fr">.ScPored[<i class="fa fa-paper-plane fa-fw"></i>]               | florian.oswald@sciencespo.fr       |
+| <a href="https://github.com/ScPoEcon/Advanced-Metrics-slides">.ScPored[<i class="fa fa-link fa-fw"></i>] | Slides |
+| <a href="https://scpoecon.github.io/ScPoEconometrics">.ScPored[<i class="fa fa-link fa-fw"></i>] | Book |
+| <a href="http://twitter.com/ScPoEcon">.ScPored[<i class="fa fa-twitter fa-fw"></i>]                          | @ScPoEcon                         |
+| <a href="http://github.com/ScPoEcon">.ScPored[<i class="fa fa-github fa-fw"></i>]                          | @ScPoEcon                       |
+
