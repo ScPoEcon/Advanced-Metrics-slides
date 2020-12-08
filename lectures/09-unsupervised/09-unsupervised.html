@@ -766,7 +766,7 @@ ames_lasso$lambda.1se  # lambda for this MSE
 ## [1] 0.01326591
 ```
 
-* So: at MSE-minimizing `\(\lambda\)`, we went down to 160 variables.
+* So: at MSE-minimizing `\(\lambda\)`, we went down to &lt; 139 variables.
 
 * Going 1 SE to the right incurs slightly higher MSE, but important reduction in variables!
 ]
@@ -825,11 +825,18 @@ class: separator, middle
 
 * Remember: in this class of methods we don't have a designated *output* `\(y\)` for our *input* variables `\(x\)`.
 
-* We will talk about Principal Component Analysis (PCA)
+* We will talk about about Clustering methods
 
-* And about Clustering methods.
+* We won't have time for Principal Component Analysis (PCA).
 
 * Both of those are useful to *summarise* high-dimensional datasets. 
+
+---
+
+class: separator, middle
+
+# K-means Clustering
+
 
 ---
 background-image: url(../../img/clustering/c1.png)
@@ -889,6 +896,37 @@ class: middle
 ## [https://www.naftaliharris.com/blog/visualizing-k-means-clustering/](https://www.naftaliharris.com/blog/visualizing-k-means-clustering/)
 
 
+---
+
+# What is k-Means Clustering Doing?
+
+.pull-left[
+* Denote `\(C_k\)` the `\(k\)`-th cluster. 
+
+* Each observation is assigned to exactly one cluster.
+
+* Clusters are non-overlapping.
+
+* A **good** clustering is one where *within-cluster variation* is as small as possible.
+
+* Let's write `\(W(C_k)\)` as some measure of **within cluster variation**.
+
+
+* K-means tries to solve the problem of how to setup the clusters (i.e. how to assign observations to clusters), in order to...
+]
+
+
+--
+
+.pull-right[
+
+*  ...minimize the total sum of of `\(W(C_k)\)`:
+    `$$\min_{C_1,\dots,C_K} \left\{\sum_{k=1}^K W(C_k) \right\}$$`
+
+* A common choice for `\(W(C_k)\)` is the squared *Euclidean Distance*:
+    `$$W(C_k) = \frac{1}{|C_k|}\sum_{i,i'\in C_k} \sum_{j=1}^p (x_{ij} - x_{i'j})^2$$`
+    where `\(|C_k|\)` is the number of elements of `\(C_k\)`.
+]
 
 
 ---
@@ -1008,6 +1046,10 @@ kclusts
 
 # How many clusters `k` to choose?
 
+* Teasing out different datasets for plotting
+
+* notice the `unnest` calls are useful for `list` columns
+
 
 ```r
 clusters &lt;- 
@@ -1030,6 +1072,9 @@ clusterings &lt;-
 # How many clusters `k` to choose?
 
 .pull-left[
+&lt;br&gt;
+&lt;br&gt;
+&lt;br&gt;
 
 ```r
 p1 &lt;- 
@@ -1049,13 +1094,24 @@ p1 &lt;-
 
 
 ```r
+# the Elbow plot
 ggplot(clusterings, aes(k, tot.withinss)) +
-  geom_line() +
+  geom_line() + ylab("Sum of W(C_k) over k") +
   geom_point()
 ```
 
-&lt;img src="09-unsupervised_files/figure-html/unnamed-chunk-38-1.svg" style="display: block; margin: auto;" /&gt;
+.left-thin[
+* Look for the **Elbow**!
 
+* Here at `k = 3` the reduction in `\(\sum_k W(C_k)\)` slows down a lot.
+
+* More flexibility (more clusters) **overfits** the data beyond a certain point (the *elbow*)
+
+]
+
+.right-wide[
+&lt;img src="09-unsupervised_files/figure-html/unnamed-chunk-39-1.svg" style="display: block; margin: auto;" /&gt;
+]
 
 
 ---
