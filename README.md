@@ -31,7 +31,7 @@ Lecture 7: Discrete Outcomes: Logit and Probit. Bernoulli reminder, Mroz dataset
 
 Lecture 8: Intro to Statistical (or *Machine*) Learning 1: the bias-variance-tradeoff, taxonomy of methods, parametric vs non-parametric, linear vs nonlinear, relationship between variance, bias and MSE [[HTML](https://raw.githack.com/ScPoEcon/Advanced-Metrics-slides/master/lectures/08-learning/08-learning.html)]
 
-Lecture 9: Intro to Statistical (or *Machine*) Learning 2: Subset selection (Lasso and Ridge regressions), unsupervised learning (PCA and K-means clustering)
+Lecture 9: Intro to Statistical (or *Machine*) Learning 2: Subset selection (Lasso and Ridge regressions), unsupervised learning (PCA and K-means clustering) [[HTML](https://raw.githack.com/ScPoEcon/Advanced-Metrics-slides/master/lectures/09-unsupervised/09-unsupervised.html)]
 
 ## Legal
 
