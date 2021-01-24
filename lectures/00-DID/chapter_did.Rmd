@@ -6,20 +6,20 @@ date: "SciencesPo Paris </br> `r Sys.Date()`"
 output:
   xaringan::moon_reader:
     lib_dir: libs
-    css: [default, "../css/scpo.css", "../css/scpo-fonts.css"]
+    css: [default, "../../css/scpo.css", "../../css/scpo-fonts.css"]
     nature:
-      beforeInit: ["../js/ru_xaringan.js"]
+      beforeInit: ["../../js/ru_xaringan.js"]
       highlightStyle: github
       highlightLines: true
       countIncrementalSlides: false
       ratio: "16:9"
     includes:
-      in_header: "../libs/partials/header.html"
+      in_header: "../../libs/partials/header.html"
 ---
 
 layout: true
 
-<div class="my-footer"><img src="../img/logo/ScPo-shield.png" style="height: 60px;"/></div> 
+<div class="my-footer"><img src="../../img/logo/ScPo-shield.png" style="height: 60px;"/></div> 
 
 ---
 
@@ -51,7 +51,7 @@ set.seed(1234)
 
 layout: true
 
-<div class="my-footer"><img src="../img/logo/ScPo-shield.png" style="height: 60px;"/></div> 
+<div class="my-footer"><img src="../../img/logo/ScPo-shield.png" style="height: 60px;"/></div> 
 
 ---
 
@@ -173,7 +173,7 @@ layout: true
 
 .pull-left[
 ```{r, echo = F, out.width = "600px"}
-knitr::include_graphics("../img/photos/nj_penn_map.png")
+knitr::include_graphics("../../img/photos/nj_penn_map.png")
 ```
 ]
 
@@ -591,7 +591,7 @@ class: title-slide-section-red, middle
 
 layout: true
 
-<div class="my-footer"><img src="../img/logo/ScPo-shield.png" style="height: 60px;"/></div> 
+<div class="my-footer"><img src="../../img/logo/ScPo-shield.png" style="height: 60px;"/></div> 
 
 ---
 
@@ -724,7 +724,7 @@ class: title-slide-section-red, middle
 
 layout: true
 
-<div class="my-footer"><img src="../img/logo/ScPo-shield.png" style="height: 60px;"/></div> 
+<div class="my-footer"><img src="../../img/logo/ScPo-shield.png" style="height: 60px;"/></div> 
 
 ---
 
@@ -956,7 +956,7 @@ grid.brackets(x,
 Here is the actual trends for Pennsylvania and New Jersey
 
 ```{r, echo = F, out.width = "600px"}
-knitr::include_graphics("../img/photos/min_wage_parallel_trends.png")
+knitr::include_graphics("../../img/photos/min_wage_parallel_trends.png")
 ```
 
 --
@@ -1114,7 +1114,7 @@ $$
 
 ---
 class: title-slide-final, middle
-background-image: url(../img/logo/ScPo-econ.png)
+background-image: url(../../img/logo/ScPo-econ.png)
 background-size: 250px
 background-position: 9% 19%
 

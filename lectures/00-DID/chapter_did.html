@@ -1,14 +1,27 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<html lang="" xml:lang="">
   <head>
     <title>ScPoEconometrics</title>
     <meta charset="utf-8" />
     <meta name="author" content="Florian Oswald, Gustave Kenedi and Pierre Villedieu" />
+    <script src="libs/header-attrs/header-attrs.js"></script>
     <link href="libs/remark-css/default.css" rel="stylesheet" />
     <script src="libs/kePrint/kePrint.js"></script>
+    <link href="libs/lightable/lightable.css" rel="stylesheet" />
     <script src="https://use.fontawesome.com/5235085b15.js"></script>
-    <link rel="stylesheet" href="../css/scpo.css" type="text/css" />
-    <link rel="stylesheet" href="../css/scpo-fonts.css" type="text/css" />
+
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-41584331-6"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'UA-41584331-6');
+    </script>
+
+    <link rel="stylesheet" href="../../css/scpo.css" type="text/css" />
+    <link rel="stylesheet" href="../../css/scpo-fonts.css" type="text/css" />
   </head>
   <body>
     <textarea id="source">
@@ -17,14 +30,14 @@ class: center, middle, inverse, title-slide
 # ScPoEconometrics
 ## Differences-in-Differences
 ### Florian Oswald, Gustave Kenedi and Pierre Villedieu
-### SciencesPo Paris </br> 2020-04-21
+### SciencesPo Paris </br> 2021-01-24
 
 ---
 
 
 layout: true
 
-&lt;div class="my-footer"&gt;&lt;img src="../img/logo/ScPo-shield.png" style="height: 60px;"/&gt;&lt;/div&gt; 
+&lt;div class="my-footer"&gt;&lt;img src="../../img/logo/ScPo-shield.png" style="height: 60px;"/&gt;&lt;/div&gt; 
 
 ---
 
@@ -32,7 +45,7 @@ layout: true
 
 layout: true
 
-&lt;div class="my-footer"&gt;&lt;img src="../img/logo/ScPo-shield.png" style="height: 60px;"/&gt;&lt;/div&gt; 
+&lt;div class="my-footer"&gt;&lt;img src="../../img/logo/ScPo-shield.png" style="height: 60px;"/&gt;&lt;/div&gt; 
 
 ---
 
@@ -153,7 +166,7 @@ layout: true
 --
 
 .pull-left[
-&lt;img src="../img/photos/nj_penn_map.png" width="600px" style="display: block; margin: auto;" /&gt;
+&lt;img src="../../img/photos/nj_penn_map.png" width="600px" style="display: block; margin: auto;" /&gt;
 ]
 
 --
@@ -294,61 +307,61 @@ Let's look at these results graphically.
 
 # DiD Graphically
 
-&lt;img src="chapter_did_files/figure-html/unnamed-chunk-110-1.svg" style="display: block; margin: auto;" /&gt;
+&lt;img src="chapter_did_files/figure-html/unnamed-chunk-6-1.svg" style="display: block; margin: auto;" /&gt;
 
 ---
 
 # DiD Graphically
 
-&lt;img src="chapter_did_files/figure-html/unnamed-chunk-111-1.svg" style="display: block; margin: auto;" /&gt;
+&lt;img src="chapter_did_files/figure-html/unnamed-chunk-7-1.svg" style="display: block; margin: auto;" /&gt;
 
 ---
 
 # DiD Graphically
 
-&lt;img src="chapter_did_files/figure-html/unnamed-chunk-112-1.svg" style="display: block; margin: auto;" /&gt;
+&lt;img src="chapter_did_files/figure-html/unnamed-chunk-8-1.svg" style="display: block; margin: auto;" /&gt;
 
 ---
 
 # DiD Graphically
 
-&lt;img src="chapter_did_files/figure-html/unnamed-chunk-113-1.svg" style="display: block; margin: auto;" /&gt;
+&lt;img src="chapter_did_files/figure-html/unnamed-chunk-9-1.svg" style="display: block; margin: auto;" /&gt;
 
 ---
 
 # DiD Graphically
 
-&lt;img src="chapter_did_files/figure-html/unnamed-chunk-114-1.svg" style="display: block; margin: auto;" /&gt;
+&lt;img src="chapter_did_files/figure-html/unnamed-chunk-10-1.svg" style="display: block; margin: auto;" /&gt;
 
 ---
 
 # DiD Graphically
 
-&lt;img src="chapter_did_files/figure-html/unnamed-chunk-115-1.svg" style="display: block; margin: auto;" /&gt;
+&lt;img src="chapter_did_files/figure-html/unnamed-chunk-11-1.svg" style="display: block; margin: auto;" /&gt;
 
 ---
 
 # What if we had done a naive after/before comparison?
 
-&lt;img src="chapter_did_files/figure-html/unnamed-chunk-116-1.svg" style="display: block; margin: auto;" /&gt;
+&lt;img src="chapter_did_files/figure-html/unnamed-chunk-12-1.svg" style="display: block; margin: auto;" /&gt;
 
 ---
 
 # What if we had done a naive after/before comparison?
 
-&lt;img src="chapter_did_files/figure-html/unnamed-chunk-117-1.svg" style="display: block; margin: auto;" /&gt;
+&lt;img src="chapter_did_files/figure-html/unnamed-chunk-13-1.svg" style="display: block; margin: auto;" /&gt;
 
 ---
 
 # What if we had done a naive after NJ/PA comparison?
 
-&lt;img src="chapter_did_files/figure-html/unnamed-chunk-118-1.svg" style="display: block; margin: auto;" /&gt;
+&lt;img src="chapter_did_files/figure-html/unnamed-chunk-14-1.svg" style="display: block; margin: auto;" /&gt;
 
 ---
 
 # What if we had done a naive after NJ/PA comparison?
 
-&lt;img src="chapter_did_files/figure-html/unnamed-chunk-119-1.svg" style="display: block; margin: auto;" /&gt;
+&lt;img src="chapter_did_files/figure-html/unnamed-chunk-15-1.svg" style="display: block; margin: auto;" /&gt;
 
 ---
 
@@ -361,7 +374,7 @@ class: title-slide-section-red, middle
 
 layout: true
 
-&lt;div class="my-footer"&gt;&lt;img src="../img/logo/ScPo-shield.png" style="height: 60px;"/&gt;&lt;/div&gt; 
+&lt;div class="my-footer"&gt;&lt;img src="../../img/logo/ScPo-shield.png" style="height: 60px;"/&gt;&lt;/div&gt; 
 
 ---
 
@@ -494,7 +507,7 @@ class: title-slide-section-red, middle
 
 layout: true
 
-&lt;div class="my-footer"&gt;&lt;img src="../img/logo/ScPo-shield.png" style="height: 60px;"/&gt;&lt;/div&gt; 
+&lt;div class="my-footer"&gt;&lt;img src="../../img/logo/ScPo-shield.png" style="height: 60px;"/&gt;&lt;/div&gt; 
 
 ---
 
@@ -516,44 +529,44 @@ layout: true
 
 #  Parallel Trends: Graphically
 
-&lt;img src="chapter_did_files/figure-html/unnamed-chunk-120-1.svg" style="display: block; margin: auto;" /&gt;
+&lt;img src="chapter_did_files/figure-html/unnamed-chunk-16-1.svg" style="display: block; margin: auto;" /&gt;
 
 ---
 
 # Checking the parallel trends assumption
 
 
-&lt;img src="chapter_did_files/figure-html/unnamed-chunk-121-1.svg" style="display: block; margin: auto;" /&gt;
+&lt;img src="chapter_did_files/figure-html/unnamed-chunk-17-1.svg" style="display: block; margin: auto;" /&gt;
 
 ---
 
 # Checking the parallel trends assumption
 
-&lt;img src="chapter_did_files/figure-html/unnamed-chunk-122-1.svg" style="display: block; margin: auto;" /&gt;
+&lt;img src="chapter_did_files/figure-html/unnamed-chunk-18-1.svg" style="display: block; margin: auto;" /&gt;
 
 ---
 
 # Parallel trends assumption `\(\rightarrow\)` Verified ✅
 
-&lt;img src="chapter_did_files/figure-html/unnamed-chunk-123-1.svg" style="display: block; margin: auto;" /&gt;
+&lt;img src="chapter_did_files/figure-html/unnamed-chunk-19-1.svg" style="display: block; margin: auto;" /&gt;
 
 ---
 
 # Parallel trends assumption `\(\rightarrow\)` Verified ✅
 
-&lt;img src="chapter_did_files/figure-html/unnamed-chunk-124-1.svg" style="display: block; margin: auto;" /&gt;
+&lt;img src="chapter_did_files/figure-html/unnamed-chunk-20-1.svg" style="display: block; margin: auto;" /&gt;
 
 ---
 
 # Parallel trends assumption `\(\rightarrow\)` Not verified ❌
 
-&lt;img src="chapter_did_files/figure-html/unnamed-chunk-125-1.svg" style="display: block; margin: auto;" /&gt;
+&lt;img src="chapter_did_files/figure-html/unnamed-chunk-21-1.svg" style="display: block; margin: auto;" /&gt;
 
 ---
 
 # Parallel trends assumption `\(\rightarrow\)` Not verified ❌
 
-&lt;img src="chapter_did_files/figure-html/unnamed-chunk-126-1.svg" style="display: block; margin: auto;" /&gt;
+&lt;img src="chapter_did_files/figure-html/unnamed-chunk-22-1.svg" style="display: block; margin: auto;" /&gt;
 
 ---
 
@@ -561,7 +574,7 @@ layout: true
 
 Here is the actual trends for Pennsylvania and New Jersey
 
-&lt;img src="../img/photos/min_wage_parallel_trends.png" width="600px" style="display: block; margin: auto;" /&gt;
+&lt;img src="../../img/photos/min_wage_parallel_trends.png" width="600px" style="display: block; margin: auto;" /&gt;
 
 --
 
@@ -718,7 +731,7 @@ $$
 
 ---
 class: title-slide-final, middle
-background-image: url(../img/logo/ScPo-econ.png)
+background-image: url(../../img/logo/ScPo-econ.png)
 background-size: 250px
 background-position: 9% 19%
 
@@ -734,10 +747,11 @@ background-position: 9% 19%
 | &lt;a href="https://scpoecon.github.io/ScPoEconometrics"&gt;.ScPored[&lt;i class="fa fa-link fa-fw"&gt;&lt;/i&gt;] | Book |
 | &lt;a href="http://twitter.com/ScPoEcon"&gt;.ScPored[&lt;i class="fa fa-twitter fa-fw"&gt;&lt;/i&gt;]                          | @ScPoEcon                         |
 | &lt;a href="http://github.com/ScPoEcon"&gt;.ScPored[&lt;i class="fa fa-github fa-fw"&gt;&lt;/i&gt;]                          | @ScPoEcon                       |
+
     </textarea>
 <style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
 <script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
-<script src="../js/ru_xaringan.js"></script>
+<script src="../../js/ru_xaringan.js"></script>
 <script>var slideshow = remark.create({
 "highlightStyle": "github",
 "highlightLines": true,
@@ -783,6 +797,32 @@ if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
     deleted = true;
   });
 })();
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
 // adds .remark-code-has-line-highlighted class to <pre> parent elements
 // of code chunks containing highlighted lines with class .remark-code-line-highlighted
 (function(d) {
@@ -800,17 +840,6 @@ if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
   }
   preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
 })(document);</script>
-
-<script>
-(function() {
-  var links = document.getElementsByTagName('a');
-  for (var i = 0; i < links.length; i++) {
-    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
-      links[i].target = '_blank';
-    }
-  }
-})();
-</script>
 
 <script>
 slideshow._releaseMath = function(el) {
