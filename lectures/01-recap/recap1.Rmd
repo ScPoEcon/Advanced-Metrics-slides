@@ -177,6 +177,8 @@ longeval = FALSE
 # Syllabus
 
 .pull-left[
+0. Intro, Difference-in-Differences
+
 1. Intro, Recap 1
     (*Quiz 1*)
 
@@ -518,7 +520,7 @@ background-image: url(../../img/simulation-scatter-1.png)
 background-size: cover
 count: false
 
-```{R, simulation scatter, echo = F, dev = "png", dpi = 300, cache = T,eval = F}
+```{R, simulation scatter, echo = F, dev = "png", dpi = 300, cache = T,eval = T}
 # Reshape sim_df
 line_df <- tibble(
   intercept = sim_df %>% filter(term != "x") %>% select(estimate) %>% unlist(),
