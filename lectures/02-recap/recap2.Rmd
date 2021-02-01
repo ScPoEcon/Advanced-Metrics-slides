@@ -965,6 +965,408 @@ lm(log(price) ~ log(lotsize) + log(sqrft) + bdrms + colonial, hprice1) %>% summa
 
 ]
 
+
+---
+layout: false
+class: title-slide-section-red, middle
+
+# Uncertainty and inference
+
+
+
+
+---
+layout: true
+# Uncertainty and inference
+
+---
+
+## Is there more?
+
+Up to this point, we know OLS has some nice properties, and we know how to estimate an intercept and slope coefficient via OLS.
+
+Our current workflow:
+- Get data (points with $x$ and $y$ values)
+- Regress $y$ on $x$
+- Plot the OLS line (_i.e._, $\hat{y} = \hat{\beta}_0 + \hat{\beta}_1$)
+- Done?
+
+But how do we actually **learn** something from this exercise?
+---
+
+## Linkup with Intro Course
+
+This is related to [*Intro Course material*](https://github.com/ScPoEcon/ScPoEconometrics-Slides):
+
+1. [Sampling](https://raw.githack.com/ScPoEcon/ScPoEconometrics-Slides/master/chapter6/chapter6.html)
+
+2. [Hypothesis Testing](https://raw.githack.com/ScPoEcon/ScPoEconometrics-Slides/master/chapter_CI_hypothesis/CI_and_hypothesis_test.html) 
+3. [Regression Inference](https://raw.githack.com/ScPoEcon/ScPoEconometrics-Slides/master/chapter_reginference/reg_inference.html)
+---
+
+## There is more
+
+But how do we actually **learn** something from this exercise?
+
+- Based upon our value of $\hat{\beta}_1$, can we rule out previously hypothesized values?
+- How confident should we be in the precision of our estimates?
+- How well does our model explain the variation we observe in $y$?
+
+We need to be able to deal with uncertainty. Enter: **Inference.**
+
+
+
+---
+layout: true
+# Uncertainty and inference
+## Learning from our errors
+
+---
+
+As our previous simulation pointed out, our problem with **uncertainty** is that we don't know whether our sample estimate is *close* or *far* from the unknown population parameter.<sup>.red[†]</sup>
+
+However, all is not lost. We can use the errors $\left(e_i = y_i - \hat{y}_i\right)$ to get a sense of how well our model explains the observed variation in $y$.
+
+When our model appears to be doing a "nice" job, we might be a little more confident in using it to learn about the relationship between $y$ and $x$.
+
+Now we just need to formalize what a "nice job" actually means.
+
+.footnote[
+.red[†]: Except when we run the simulation ourselves—which is why we like simulations.
+]
+
+---
+
+First off, we will estimate the variance of $u_i$ (recall: $\mathop{\text{Var}} \left( u_i \right) = \sigma^2$) using our squared errors, _i.e._,
+
+$$ s^2 = \dfrac{\sum_i e_i^2}{n - k} $$
+
+where $k$ gives the number of slope terms and intercepts that we estimate (_e.g._, $\beta_0$ and $\beta_1$ would give $k=2$).
+
+$s^2$ is an unbiased estimator of $\sigma^2$.
+
+---
+
+We know that the variance of $\hat{\beta}_1$ (for simple linear regression) is
+
+$$\mathop{\text{Var}} \left( \hat{\beta}_1 \right) = \frac{s^2}{\sum_i \left( x_i - \overline{x} \right)^2}$$
+
+which shows that the variance of our slope estimator
+
+1. increases as our disturbances become noisier
+2. decreases as the variance of $x$ increases
+
+---
+
+*More common:* The **standard error** of $\hat{\beta}_1$
+
+$$ \mathop{\hat{\text{SE}}} \left( \hat{\beta}_1 \right) = \sqrt{\dfrac{s^2}{\sum_i \left( x_i - \overline{x} \right)^2}} $$
+
+*Recall:* The standard error of an estimator is the standard deviation of the estimator's distribution.
+
+---
+
+Standard error output is standard in `R`'s `lm`:
+
+```{R, gen dataset, echo = FALSE}
+# Set population and sample sizes
+n_p <- 100
+n_s <- 30
+# Set the seed
+set.seed(12468)
+# Generate data
+pop_df <- tibble(
+  i = 3,
+  x = rnorm(n_p, mean = 5, sd = 1.5),
+  e = rnorm(n_p, mean = 0, sd = 1),
+  y = i + 0.5 * x + e,
+  row = rep(1:sqrt(n_p), times = sqrt(n_p)),
+  col = rep(1:sqrt(n_p), each = sqrt(n_p)),
+  s1 = sample(x = c(rep(T, n_s), rep(F, n_p - n_s))),
+  s2 = sample(x = c(rep(T, n_s), rep(F, n_p - n_s))),
+  s3 = sample(x = c(rep(T, n_s), rep(F, n_p - n_s)))
+)
+# Regressions
+lm0 <- lm(y ~ x, data = pop_df)
+lm1 <- lm(y ~ x, data = filter(pop_df, s1 == T))
+lm2 <- lm(y ~ x, data = filter(pop_df, s2 == T))
+lm3 <- lm(y ~ x, data = filter(pop_df, s3 == T))
+# Simulation
+set.seed(12468)
+sim_df <- mclapply(mc.cores = 10, X = 1:1e4, FUN = function(x, size = n_s) {
+  lm(y ~ x, data = pop_df %>% sample_n(size = size)) %>% tidy()
+}) %>% do.call(rbind, .) %>% as_tibble()
+```
+
+```{R, se}
+tidy(lm(y ~ x, pop_df))
+```
+---
+
+We use the standard error of $\hat{\beta}_1$, along with $\hat{\beta}_1$ itself, to learn about the parameter $\beta_1$.
+
+After deriving the distribution of $\hat{\beta}_1$,<sup>.red[†]</sup> we have two (related) options for formal statistical inference (learning) about our unknown parameter $\beta_1$:
+
+- **Confidence intervals:** Use the estimate and its standard error to create an interval that, when repeated, will generally<sup>.red[††]</sup> contain the true parameter.
+
+- **Hypothesis tests:** Determine whether there is statistically significant evidence to reject a hypothesized value or range of values.
+
+.footnote[
+.red[†]: *Hint:* it's normal with the mean and variance we've derived/discussed above)
+<br>
+.red[††]: _E.g._, Similarly constructed 95% confidence intervals will contain the true parameter 95% of the time.
+]
+
+---
+layout: true
+# Uncertainty and inference
+## Confidence intervals
+
+We construct $(1-\alpha)$-level confidence intervals for $\beta_1$
+$$ \hat{\beta}\_1 \pm t\_{\alpha/2,\text{df}} \, \mathop{\hat{\text{SE}}} \left( \hat{\beta}\_1 \right) $$
+
+---
+
+$t_{\alpha/2,\text{df}}$ denotes the $\alpha/2$ quantile of a $t$ dist. with $n-k$ degrees of freedom.
+
+---
+
+For example, 100 obs., two coefficients (_i.e._, $\hat{\beta}_0$ and $\hat{\beta}_1 \implies k = 2$), and $\alpha = 0.05$ (for a 95% confidence interval) gives us $t_{0.025,\,98} = `r qt(0.025, 98) %>% round(2)`$
+
+```{R, t dist, echo = F, fig.height = 2}
+d6 <- tibble(x = seq(-4, 4, 0.01), y = dt(x, df = 98)) %>%
+  rbind(., tibble(x = seq(4, -4, -0.01), y = 0))
+ggplot() +
+geom_polygon(data = d6, aes(x, y), fill = "grey85") +
+geom_polygon(data = d6 %>% filter(x <= qt(0.025, 98)), aes(x, y), fill = scpo_red) +
+geom_hline(yintercept = 0, color = "black") +
+geom_vline(xintercept = qt(0.025, 98), size = 0.35, linetype = "solid") +
+theme_simple +
+theme(axis.text.x = element_text(size = 12))
+```
+
+---
+
+**Example:**
+```{R ci r output, echo = T, highlight.output = 5}
+lm(y ~ x, data = pop_df) %>% tidy(conf.int = TRUE)
+```
+
+--
+
+Our 95% confidence interval is thus $0.567 \pm 1.98 \times 0.0793 = \left[ 0.410,\, 0.724 \right]$
+
+---
+layout: true
+# Uncertainty and inference
+## Confidence intervals
+
+---
+
+So we have a confidence interval for $\beta_1$, _i.e._, $\left[ 0.410,\, 0.724 \right]$.
+
+What does it mean?
+
+--
+
+**Informally:** The confidence interval gives us a region (interval) in which we can place some trust (confidence) for containing the parameter.
+
+--
+
+**More formally:** If repeatedly sample from our population and construct confidence intervals for each of these samples, $(1-\alpha)$ percent of our intervals (_e.g._, 95%) will contain the population parameter *somewhere in the interval*.
+
+--
+https://scpoecon.github.io/ScPoEconometrics/std-errors.html#class-reg
+Now back to our simulation...
+
+---
+
+We drew 10,000 samples (each of size $n = 30$) from our population and estimated our regression model for each of these simulations:
+
+$$ y_i = \hat{\beta}_0 + \hat{\beta}_1 x_i + e_i $$
+<center>(repeated 10,000 times)</center>
+
+Now, let's estimate 95% confidence intervals for each of these intervals...
+
+---
+
+```{R, simulation ci data, include = F}
+# Create confidence intervals for b1
+ci_df <- sim_df %>% filter(term == "x") %>%
+  mutate(
+    lb = estimate - std.error * qt(.975, 28),
+    ub = estimate + std.error * qt(.975, 28),
+    ci_contains = (lm0$coefficients[2] >= lb) & (lm0$coefficients[2] <= ub),
+    ci_above = lm0$coefficients[2] < lb,
+    ci_below = lm0$coefficients[2] > ub,
+    ci_group = 2 * ci_above + (!ci_below)
+  ) %>%
+  arrange(ci_group, estimate) %>%
+  mutate(x = 1:1e4)
+```
+
+.left-wide[
+
+```{R, simulation ci, echo = F, fig.height = 5.5}
+# Plot
+ggplot(data = ci_df) +
+geom_segment(aes(y = lb, yend = ub, x = x, xend = x, color = ci_contains)) +
+geom_hline(yintercept = lm0$coefficients[2]) +
+scale_y_continuous(breaks = lm0$coefficients[2], labels = TeX("$\\beta_1$")) +
+scale_color_manual(values = c(scpo_red, "grey85")) +
+theme_simple +
+theme(
+  axis.text.x = element_blank(),
+  axis.text.y = element_text(size = 18)
+)
+```
+
+]
+
+.right-thin[
+**From our previous simulation:** `r ci_df$ci_contains %>% multiply_by(100) %>% mean() %>% round(1)`% of our 95% confidences intervals contain the true parameter value of $\beta_1$.
+
+That's a **probabilistic statement**:
+
+* Could be more.
+* Could be less. 
+
+]
+
+
+
+
+---
+layout: true
+# Uncertainty and inference
+## Hypothesis testing
+
+---
+
+In many applications, we want to know more than a point estimate or a range of values. We want to know what our statistical evidence says about existing theories.
+
+We want to test hypotheses posed by officials, politicians, economists, scientists, friends, weird neighbors, *etc.*
+
+.hi-slate[Examples]
+
+- Does increasing police presence **reduce crime**?
+- Does building a giant wall **reduce crime**?
+- Does shutting down a government **adversely affect the economy**?
+- Does legal cannabis **reduce drunk driving** or **reduce opiod use**?
+- Do air quality standards **increase health** and/or **reduce jobs**?
+
+---
+
+Hypothesis testing relies upon very similar results and intuition.
+
+While uncertainty certainly exists, we can still build *reliable* statistical tests (rejecting or failing to reject a posited hypothesis).
+
+--
+
+.hi-slate[OLS *t* test] Our (null) hypothesis states that $\beta_1$ equals a value $c$, _i.e._, $H_o:\: \beta_1 = c$
+
+From OLS's properties, we can show that the test statistic
+
+$$ t_\text{stat} = \dfrac{\hat{\beta}_1 - c}{\mathop{\hat{\text{SE}}} \left( \hat{\beta}_1 \right)} $$
+
+follows the $t$ distribution with $n-k$ degrees of freedom.
+
+---
+
+For an $\alpha$-level, **two-sided** test, we reject the null hypothesis (and conclude with the alternative hypothesis) when
+
+$$ \left|t\_\text{stat}\right| > \left|t\_{1-\alpha/2,\,df}\right| $$
+
+meaning that our **test statistic is more extreme than the critical value**.
+
+Alternatively, we can calculate the **p-value** that accompanies our test statistic, which effectively gives us the probability of seeing our test statistic *or a more extreme test statistic* if the null hypothesis were true.
+
+Very small p-values (generally < 0.05) mean that it would be unlikely to see our results if the null hyopthesis were really true—we tend to reject the null for p-values below 0.05.
+
+---
+
+`R` and `stata`s default to testing hypotheses against the value zero.
+
+```{R hypothesis test, echo = T, highlight.output = 5}
+lm(y ~ x, data = pop_df) %>% tidy()
+```
+--
+
+H.sub[o]: $\beta_1 = 0$ *vs.* H.sub[a]: $\beta_1 \neq 0$
+
+--
+
+ $t_\text{stat} = 7.15$ and $t_\text{0.975, 28} = `r qt(0.975, 28) %>% round(2)`$
+--
+ which implies *p*-value $< 0.05$
+
+--
+
+Therefore, we .hi[reject H.sub[o]].
+
+---
+layout: true
+# Uncertainty and inference
+## *F* tests
+
+---
+You will sometimes see $F$ tests in econometrics.
+
+We use $F$ tests to test hypotheses that involve multiple parameters
+<br> (_e.g._, $\beta_1 = \beta_2$ or $\beta_3 + \beta_4 = 1$),
+
+rather than a single simple hypothesis
+<br> (_e.g._, $\beta_1 = 0$, for which we would just use a $t$ test).
+
+---
+**Example**
+
+Economists love to say "Money is fungible."
+
+Imagine that we might want to test whether money received as income actually has the same effect on consumption as money received from tax rebates/returns.
+
+$$ \text{Consumption}\_i = \beta\_0 + \beta\_1 \text{Income}\_{i} + \beta\_2 \text{Rebate}\_i + u\_i $$
+
+---
+
+**Example, continued**
+
+
+We can write our null hypothesis as
+
+$$ H_o:\: \beta_1 = \beta_2 \iff H_o :\: \beta_1 - \beta_2 = 0 $$
+
+Imposing this null hypothesis gives us the **restricted model**
+
+$$ \text{Consumption}\_i = \beta\_0 + \beta\_1 \text{Income}\_{i} + \beta\_1 \text{Rebate}\_i + u\_i $$
+$$ \text{Consumption}\_i = \beta\_0 + \beta\_1 \left( \text{Income}\_{i} + \text{Rebate}\_i \right) + u\_i $$
+
+---
+
+**Example, continued**
+
+To this the null hypothesis $H_o :\: \beta_1 = \beta_2$ against $H_a :\: \beta_1 \neq \beta_2$,
+<br>we use the $F$ statistic
+$$
+\begin{align}
+  F_{q,\,n-k-1} = \dfrac{\left(\text{SSE}_r - \text{SSE}_u\right)/q}{\text{SSE}_u/(n-k-1)}
+\end{align}
+$$
+which (as its name suggests) follows the $F$ distribution with $q$ numerator degrees of freedom and $n-k-1$ denominator degrees of freedom.
+
+Here, $q$ is the number of restrictions we impose via $H_o$.
+
+---
+
+**Example, continued**
+
+The term $\text{SSE}_r$ is the sum of squared errors (SSE) from our **restricted model**
+$$ \text{Consumption}\_i = \beta\_0 + \beta\_1 \left( \text{Income}\_{i} + \text{Rebate}\_i \right) + u\_i $$
+
+and $\text{SSE}_u$ is the sum of squared errors (SSE) from our **unrestricted model**
+$$ \text{Consumption}\_i = \beta\_0 + \beta\_1 \text{Income}\_{i} + \beta\_2 \text{Rebate}\_i + u\_i $$
+
+
 ---
 layout: false
 class: title-slide-final, middle
