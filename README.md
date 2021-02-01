@@ -15,6 +15,9 @@ We continue with our practical approach to learning Econometrics and R where we 
 
 Notice that several of those lectures extend over two sessions. 
 
+
+Lecture 0: Introduction and contiuation from intro course: Difference-in-Differences  [[HTML](https://raw.githack.com/ScPoEcon/Advanced-Metrics-slides/master/lectures/00-DID/chapter_did.html)]
+
 Lecture 1: Introduction, Logistics and Recap 1 from intro course. Uncertainty in regression estimates, orthogonality of error, BLUE property.  [[HTML](https://raw.githack.com/ScPoEcon/Advanced-Metrics-slides/master/lectures/01-recap/recap1.html)]
 
 Lecture 2: Recap 2 from intro course. What's a *model*, omitted variable bias, interpreting coefficients, the log transformation [[HTML](https://raw.githack.com/ScPoEcon/Advanced-Metrics-slides/master/lectures/02-recap/recap2.html)]
