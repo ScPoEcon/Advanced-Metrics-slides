@@ -28,7 +28,7 @@ class: center, middle, inverse, title-slide
 # ScPoEconometrics Advanced
 ## Recap 2
 ### Florian Oswald
-### SciencesPo Paris </br> 2021-02-01
+### SciencesPo Paris </br> 2021-02-08
 
 ---
 
@@ -303,6 +303,16 @@ Differentiate the model:
 
 $$ \dfrac{dy}{dx} = \beta_1 $$
 
+---
+class: inverse
+
+# Task 1: Interpretation (4 minutes)
+
+1. Load the `wage1` dataset from the `wooldridge` package. you may have to install this first.
+
+2. Run `skimr::skim` on the dataset to get an overview. what is the fraciton of nonwhite in the data?
+
+3. Regressing wage on education and tenure, what is the interpretation of the `tenure` coefficient? You may need to consult `?wage1` here.
 
 ---
 # Interpreting coefficients
@@ -377,6 +387,19 @@ $$
 
 &lt;img src="recap2_files/figure-html/dat plot 2-1.svg" style="display: block; margin: auto;" /&gt;
 ---
+class: inverse
+
+# Task 2: Categorical Variables (3 Minutes)
+
+* Continue with the `wage1` dataset. 
+
+* Now regress `wage` on `female`. What is `\(E[wage | \text{male}]\)`?
+
+* Add `married` to the regression. Now what is `\(E[wage | \text{female,not married}]\)`?
+
+
+---
+
 # Interpreting coefficients
 ## Interactions
 
@@ -445,6 +468,18 @@ $$
 --
 
 Similarly, `\(\beta_1\)` gives the expected return to an additional year of schooling for men. Thus, `\(\beta_3\)` gives the **difference in the returns to schooling** for women and men.
+
+---
+
+class: inverse
+
+# Task 3: Interactions (4 minutes)
+
+* Same dataset!
+
+* Regress wage on experience, female indicator and their interaction. What is the interpretation of all the coefficients here? Can you distinguish them from zero?
+
+* What is the expected wage for a male with 5 years of experience? 
 
 ---
 # Interpreting coefficients
@@ -568,6 +603,14 @@ What about that **approximation** part?
 
 ]
 
+---
+class: inverse
+
+# Task 4
+
+* same Dataset!
+
+* Now regress *log wage* on education and tenure. How does the interpretation of the coefficient on education change?
 
 
 ---
@@ -599,6 +642,17 @@ $$ \dfrac{dy}{y} = \beta_1 \dfrac{dx}{x} $$
 which says that for a one-percent increase in `\(x\)`, we will see a `\(\beta_1\)` percent increase in `\(y\)`. As an elasticity:
 
 $$ \dfrac{dy}{dx} \dfrac{x}{y} = \beta_1 $$
+---
+class: inverse
+
+# task 5
+
+* Load the `hprice1` dataset from the `wooldridge` package.
+
+* Regress log price on log sqrft. What is the interpretation on `log(sqrft)`?
+
+* What is the `\(E[\text{price} | \text{sqrft} = 115]\)` (Caution! not `log price`!)
+
 
 ---
 # Interpreting coefficients
@@ -900,7 +954,7 @@ Now, let's estimate 95% confidence intervals for each of these intervals...
 ]
 
 .right-thin[
-**From our previous simulation:** 97.7% of our 95% confidences intervals contain the true parameter value of `\(\beta_1\)`.
+**From our previous simulation:** 97.6% of our 95% confidences intervals contain the true parameter value of `\(\beta_1\)`.
 
 That's a **probabilistic statement**:
 
