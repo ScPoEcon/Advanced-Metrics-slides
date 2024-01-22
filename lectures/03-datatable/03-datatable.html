@@ -14,10 +14,18 @@
     <textarea id="source">
 class: center, middle, inverse, title-slide
 
+.title[
 # Guest Lecture
+]
+.subtitle[
 ## Data cleaning &amp; wrangling: data.table
+]
+.author[
 ### Grant McDermott
+]
+.date[
 ### University of Oregon | <a href="https://github.com/uo-ec607">EC 607</a>
+]
 
 ---
 
@@ -178,13 +186,18 @@ microbenchmark(collapse_dplyr(), collapse_dt(), times = 10)
 ```
 
 ```
+## Warning in microbenchmark(collapse_dplyr(), collapse_dt(), times = 10): less
+## accurate nanosecond times to avoid potential integer overflows
+```
+
+```
 ## Unit: milliseconds
-##              expr        min         lq       mean     median         uq
-##  collapse_dplyr() 136.862108 141.412963 156.997472 145.365396 155.390262
-##     collapse_dt()   1.573821   1.592804   2.663328   1.660133   1.847244
-##         max neval
-##  247.665423    10
-##    8.376309    10
+##              expr       min       lq       mean    median         uq        max
+##  collapse_dplyr() 95.429058 98.75891 100.249998 99.647384 101.337281 107.746729
+##     collapse_dt()  3.880773  3.97618   4.717259  4.021444   4.111193   9.047347
+##  neval
+##     10
+##     10
 ```
 ]
 
@@ -317,7 +330,7 @@ To create a data.table, we have a couple of options:
 All data.tables accept the same basic syntax:
 
 .center[
-.large2[DT[&lt;span style='color: #66C2A5;'&gt;i&lt;/span&gt;, &lt;span style='color: #FC8D62;'&gt;j&lt;/span&gt;, &lt;span style='color: #8DA0CB;'&gt;by&lt;/span&gt;]]
+.large2[DT[&lt;span style="color: #66C2A5;"&gt;i&lt;/span&gt;, &lt;span style="color: #FC8D62;"&gt;j&lt;/span&gt;, &lt;span style="color: #8DA0CB;"&gt;by&lt;/span&gt;]]
 ]
 
 ![:col_row &lt;span style='color: #66C2A5;'&gt;On which rows?&lt;/span&gt;, &lt;span style='color: #FC8D62;'&gt;What to do?&lt;/span&gt;, &lt;span style='color: #8DA0CB;'&gt;Grouped by what?&lt;/span&gt;]
@@ -492,7 +505,7 @@ starwars %&gt;%
 ```
 
 ```
-## # A tibble: 2 x 2
+## # A tibble: 2 × 2
 ##   gender    `mean(height, na.rm = T)`
 ##   &lt;chr&gt;                         &lt;dbl&gt;
 ## 1 feminine                       160.
@@ -519,6 +532,7 @@ starwars_dt[
 ```
 ]
 
+
 ---
 class: inverse, center, middle
 name: i
@@ -528,9 +542,10 @@ name: i
 
 ---
 
+
 # Subset by rows (filter)
 
-Subsetting by rows is very straightforward in data.table. Everything works pretty much the same as you'd expect if you're coming from dplyr. 
+Subsetting by rows is very straightforward in data.table. Everything works pretty much the same as you'd expect if you're coming from dplyr.
 
 - `DT[x == "string", ]`: Subset to rows where variable x equals "string"
 
@@ -634,6 +649,8 @@ starwars_dt[name %like% "Sky",.(name,height,mass)]
 ## 3:   Shmi Skywalker    163   NA
 ```
 
+
+
 ---
 class: inverse, center, middle
 name: j
@@ -654,7 +671,7 @@ Recall some of the dplyr verbs that we used to manipulate our variables in diffe
 
 --
 
-data.table recognizes that all of these verbs are just different versions of telling R... 
+data.table recognizes that all of these verbs are just different versions of telling R...
 &gt;"*Do something to this variable in my dataset*"
 
 ... and it let's you do all of those operations in one place: the `j` slot.
@@ -700,6 +717,7 @@ DT[, x_sq := x^2][] ## Adding [] prints the result.
 ## 2: 2    4
 ```
 
+
 ---
 
 # Modifying columns `:=` (cont.)
@@ -736,14 +754,16 @@ Uh-oh! It too has been removed... exactly as modifying by reference demands. To 
 
 
 ```r
-DT[, x_sq := x^2]     
-DT_copy = copy(DT)  
+DT[, x_sq := x^2]
+DT_copy = copy(DT)
 DT_copy[, x_sq := NULL]
 DT ## x_sq is still there (run and confirm for yourself)
 ```
 
 
 ---
+
+
 
 # Modifying columns `:=` (cont.)
 
@@ -758,7 +778,7 @@ DT2 = data.table(a = -2:2, b = LETTERS[1:5])
 
 --
 
-Now, imagine we want to locate all rows where "a" is negative and replace the corresponding "b" cell with NA. 
+Now, imagine we want to locate all rows where "a" is negative and replace the corresponding "b" cell with NA.
 
 --
 
@@ -804,93 +824,93 @@ starwars_dt[,.(eye_color, eye_cat, name)]
 
 ```
 ##         eye_color eye_cat                  name
-##  1:          blue   light        Luke Skywalker
-##  2:        yellow   light                 C-3PO
-##  3:           red   funky                 R2-D2
-##  4:        yellow   light           Darth Vader
-##  5:         brown    dark           Leia Organa
-##  6:          blue   light             Owen Lars
-##  7:          blue   light    Beru Whitesun lars
-##  8:           red   funky                 R5-D4
-##  9:         brown    dark     Biggs Darklighter
-## 10:     blue-gray    dark        Obi-Wan Kenobi
-## 11:          blue   light      Anakin Skywalker
-## 12:          blue   light        Wilhuff Tarkin
-## 13:          blue   light             Chewbacca
-## 14:         brown    dark              Han Solo
-## 15:         black    dark                Greedo
-## 16:        orange   funky Jabba Desilijic Tiure
-## 17:         hazel    dark        Wedge Antilles
-## 18:          blue   light      Jek Tono Porkins
-## 19:         brown    dark                  Yoda
-## 20:        yellow   light             Palpatine
-## 21:         brown    dark             Boba Fett
-## 22:           red   funky                 IG-88
-## 23:           red   funky                 Bossk
-## 24:         brown    dark      Lando Calrissian
-## 25:          blue   light                 Lobot
-## 26:        orange   funky                Ackbar
-## 27:          blue   light            Mon Mothma
-## 28:         brown    dark          Arvel Crynyd
-## 29:         brown    dark Wicket Systri Warrick
-## 30:         black    dark             Nien Nunb
-## 31:          blue   light          Qui-Gon Jinn
-## 32:           red   funky           Nute Gunray
-## 33:          blue   light         Finis Valorum
-## 34:        orange   funky         Jar Jar Binks
-## 35:        orange   funky          Roos Tarpals
-## 36:        orange   funky            Rugor Nass
-## 37:          blue   light              Ric Olié
-## 38:        yellow   light                 Watto
-## 39:        orange   funky               Sebulba
-## 40:         brown    dark         Quarsh Panaka
-## 41:         brown    dark        Shmi Skywalker
-## 42:        yellow   light            Darth Maul
-## 43:          pink   funky           Bib Fortuna
-## 44:         hazel    dark           Ayla Secura
-## 45:        yellow   light              Dud Bolt
-## 46:         black    dark               Gasgano
-## 47:        orange   funky        Ben Quadinaros
-## 48:         brown    dark            Mace Windu
-## 49:        yellow   light          Ki-Adi-Mundi
-## 50:         black    dark             Kit Fisto
-## 51:         brown    dark             Eeth Koth
-## 52:          blue   light            Adi Gallia
-## 53:        orange   funky           Saesee Tiin
-## 54:        yellow   light           Yarael Poof
-## 55:         black    dark              Plo Koon
-## 56:          blue   light            Mas Amedda
-## 57:         brown    dark          Gregar Typho
-## 58:         brown    dark                 Cordé
-## 59:          blue   light           Cliegg Lars
-## 60:        yellow   light     Poggle the Lesser
-## 61:          blue   light       Luminara Unduli
-## 62:          blue   light         Barriss Offee
-## 63:         brown    dark                 Dormé
-## 64:         brown    dark                 Dooku
-## 65:         brown    dark   Bail Prestor Organa
-## 66:         brown    dark            Jango Fett
-## 67:        yellow   light            Zam Wesell
-## 68:        yellow   light       Dexter Jettster
-## 69:         black    dark               Lama Su
-## 70:         black    dark               Taun We
-## 71:          blue   light            Jocasta Nu
-## 72:       unknown    &lt;NA&gt;         Ratts Tyerell
-## 73:     red, blue   funky                R4-P17
-## 74:       unknown    &lt;NA&gt;            Wat Tambor
-## 75:          gold   funky              San Hill
-## 76:         black    dark              Shaak Ti
-## 77: green, yellow   funky              Grievous
-## 78:          blue   light               Tarfful
-## 79:         brown    dark       Raymus Antilles
-## 80:         white   light             Sly Moore
-## 81:         black    dark            Tion Medon
-## 82:          dark    dark                  Finn
-## 83:         hazel    dark                   Rey
-## 84:         brown    dark           Poe Dameron
-## 85:         black    dark                   BB8
-## 86:       unknown    &lt;NA&gt;        Captain Phasma
-## 87:         brown    dark         Padmé Amidala
+##  1:         brown    dark Wicket Systri Warrick
+##  2:           red   funky                 IG-88
+##  3:          blue   light        Luke Skywalker
+##  4:         brown    dark           Leia Organa
+##  5:         hazel    dark        Wedge Antilles
+##  6:         black    dark              Plo Koon
+##  7:         brown    dark     Biggs Darklighter
+##  8:         brown    dark              Han Solo
+##  9:         brown    dark      Lando Calrissian
+## 10:         brown    dark             Boba Fett
+## 11:           red   funky                 R2-D2
+## 12:          blue   light                 Lobot
+## 13:          blue   light         Barriss Offee
+## 14:        orange   funky                Ackbar
+## 15:        yellow   light           Darth Vader
+## 16:          blue   light      Anakin Skywalker
+## 17:         black    dark                Greedo
+## 18:         brown    dark         Padmé Amidala
+## 19:          blue   light    Beru Whitesun lars
+## 20:          blue   light            Mon Mothma
+## 21:         hazel    dark           Ayla Secura
+## 22:          blue   light             Owen Lars
+## 23:        orange   funky         Jar Jar Binks
+## 24:           red   funky                 Bossk
+## 25:        yellow   light            Darth Maul
+## 26:     blue-gray    dark        Obi-Wan Kenobi
+## 27:          blue   light       Luminara Unduli
+## 28:         brown    dark         Quarsh Panaka
+## 29:          blue   light        Wilhuff Tarkin
+## 30:         brown    dark            Jango Fett
+## 31:         brown    dark   Bail Prestor Organa
+## 32:         brown    dark        Shmi Skywalker
+## 33:         brown    dark            Mace Windu
+## 34:        yellow   light             Palpatine
+## 35:          blue   light           Cliegg Lars
+## 36:          blue   light         Finis Valorum
+## 37:          blue   light          Qui-Gon Jinn
+## 38:        yellow   light          Ki-Adi-Mundi
+## 39:         brown    dark                 Dooku
+## 40:        yellow   light                 C-3PO
+## 41:          blue   light             Chewbacca
+## 42:        orange   funky Jabba Desilijic Tiure
+## 43:         brown    dark                  Yoda
+## 44:           red   funky                 R5-D4
+## 45:          blue   light      Jek Tono Porkins
+## 46:         brown    dark          Arvel Crynyd
+## 47:         black    dark             Nien Nunb
+## 48:           red   funky           Nute Gunray
+## 49:        orange   funky          Roos Tarpals
+## 50:        orange   funky            Rugor Nass
+## 51:          blue   light              Ric Olié
+## 52:        yellow   light                 Watto
+## 53:        orange   funky               Sebulba
+## 54:          pink   funky           Bib Fortuna
+## 55:        yellow   light              Dud Bolt
+## 56:         black    dark               Gasgano
+## 57:        orange   funky        Ben Quadinaros
+## 58:         black    dark             Kit Fisto
+## 59:         brown    dark             Eeth Koth
+## 60:          blue   light            Adi Gallia
+## 61:        orange   funky           Saesee Tiin
+## 62:        yellow   light           Yarael Poof
+## 63:          blue   light            Mas Amedda
+## 64:         brown    dark          Gregar Typho
+## 65:         brown    dark                 Cordé
+## 66:        yellow   light     Poggle the Lesser
+## 67:         brown    dark                 Dormé
+## 68:        yellow   light            Zam Wesell
+## 69:        yellow   light       Dexter Jettster
+## 70:         black    dark               Lama Su
+## 71:         black    dark               Taun We
+## 72:          blue   light            Jocasta Nu
+## 73:       unknown    &lt;NA&gt;         Ratts Tyerell
+## 74:     red, blue   funky                R4-P17
+## 75:       unknown    &lt;NA&gt;            Wat Tambor
+## 76:          gold   funky              San Hill
+## 77:         black    dark              Shaak Ti
+## 78: green, yellow   funky              Grievous
+## 79:          blue   light               Tarfful
+## 80:         brown    dark       Raymus Antilles
+## 81:         white   light             Sly Moore
+## 82:         black    dark            Tion Medon
+## 83:          dark    dark                  Finn
+## 84:         hazel    dark                   Rey
+## 85:         brown    dark           Poe Dameron
+## 86:         black    dark                   BB8
+## 87:       unknown    &lt;NA&gt;        Captain Phasma
 ##         eye_color eye_cat                  name
 ```
 
@@ -915,13 +935,13 @@ head(starwars_dt[,.(eye_color, eye_cat, eye_cat_m,name)],n=6)
 ```
 
 ```
-##    eye_color eye_cat eye_cat_m           name
-## 1:      blue   light     light Luke Skywalker
-## 2:    yellow   light     light          C-3PO
-## 3:       red   funky     funky          R2-D2
-## 4:    yellow   light     light    Darth Vader
-## 5:     brown    dark      &lt;NA&gt;    Leia Organa
-## 6:      blue   light     light      Owen Lars
+##    eye_color eye_cat eye_cat_m                  name
+## 1:     brown    dark      dark Wicket Systri Warrick
+## 2:       red   funky     funky                 IG-88
+## 3:      blue   light     light        Luke Skywalker
+## 4:     brown    dark      &lt;NA&gt;           Leia Organa
+## 5:     hazel    dark      dark        Wedge Antilles
+## 6:     black    dark      dark              Plo Koon
 ```
 ---
 
@@ -938,7 +958,7 @@ mod_dplyr &lt;- function(){
                      "red","red, blue"), "funky",
                  ifelse(c("blue","white","yellow"), "light", NA)
           )
-        ), 
+        ),
       sex == "female" ~ NA_character_)
     )
 }
@@ -963,10 +983,15 @@ microbenchmark(mod_dplyr(), mod_dt(), times = 10)
 ```
 
 ```
+## Warning in microbenchmark(mod_dplyr(), mod_dt(), times = 10): less accurate
+## nanosecond times to avoid potential integer overflows
+```
+
+```
 ## Unit: microseconds
-##         expr      min       lq     mean   median       uq       max neval
-##  mod_dplyr() 1901.214 1925.667 3528.308 2101.497 2235.383 12203.918    10
-##     mod_dt()  915.200  958.703 1593.938 1099.602 1278.768  5772.007    10
+##         expr     min      lq      mean   median     uq      max neval
+##  mod_dplyr() 664.446 713.318 1495.3151 733.9820 826.97 7041.955    10
+##     mod_dt() 582.364 622.954  967.5139 644.7455 755.22 3651.132    10
 ```
 
 ---
@@ -995,6 +1020,8 @@ DT ## Another way to print the results instead of appending []
 ## 2: 2    4 4   four
 ```
 
+
+
 --
 
 Note, however, that dynamically assigning dependent columns in a single step (like we did with dplyr::mutate) doesn't work.
@@ -1020,7 +1047,7 @@ The native data.table way is simply to append consecutive `[]` terms.
 
 
 ```r
-DT[, z := 5:6][, z_sq := z^2][] 
+DT[, z := 5:6][, z_sq := z^2][]
 ```
 
 ```
@@ -1039,7 +1066,7 @@ But if you prefer the **magrittr** pipe, then that's also possible. Just prefix 
 DT %&gt;%
   .[, xyz := x+y+z] %&gt;%
   .[, xyz_sq := xyz^2] %&gt;%
-  .[] 
+  .[]
 ```
 
 ```
@@ -1082,9 +1109,9 @@ starwars_dt[1:2, c(1:3, 10)]
 ```
 
 ```
-##              name height mass homeworld
-## 1: Luke Skywalker    172   77  Tatooine
-## 2:          C-3PO    167   75  Tatooine
+##                     name height mass homeworld
+## 1: Wicket Systri Warrick     88   20     Endor
+## 2:                 IG-88    200  140      &lt;NA&gt;
 ```
 
 --
@@ -1098,17 +1125,19 @@ starwars_dt[1:2, .(name, height, mass, homeworld)]
 ```
 
 ```
-##              name height mass homeworld
-## 1: Luke Skywalker    172   77  Tatooine
-## 2:          C-3PO    167   75  Tatooine
+##                     name height mass homeworld
+## 1: Wicket Systri Warrick     88   20     Endor
+## 2:                 IG-88    200  140      &lt;NA&gt;
 ```
 
 ---
 
+
+
 # Aside: What's with the .()?
 
 We've now seen `.()` in a couple places, e.g the previous slide and [this slide](#fast) from earlier if you were paying close attention.
-- `.()` is just a data.table shortcut for `list()`. 
+- `.()` is just a data.table shortcut for `list()`.
 
 We'll be using `.()` quite liberally once we start working subsetting and/or grouping by multiple variables at a time.
 
@@ -1159,22 +1188,22 @@ starwars_dt[1:2, .(alias = name, crib = homeworld)]
 ```
 
 ```
-##             alias     crib
-## 1: Luke Skywalker Tatooine
-## 2:          C-3PO Tatooine
+##                    alias  crib
+## 1: Wicket Systri Warrick Endor
+## 2:                 IG-88  &lt;NA&gt;
 ```
 
 ---
 
 # Subsetting on columns (cont.)
 
-One last thing I'll mention w.r.t. to subsetting columns is that you can also use dplyr verbs on data.tables if you prefer. 
+One last thing I'll mention w.r.t. to subsetting columns is that you can also use dplyr verbs on data.tables if you prefer.
 
 For example run the following code chunk for yourself. (You'll get a warning about efficiency loss, but this will be very minor for a case like this.)
 
 
 ```r
-starwars_dt[1:5, ] %&gt;% 
+starwars_dt[1:5, ] %&gt;%
   select(crib = homeworld, everything())
 ```
 
@@ -1197,6 +1226,8 @@ starwars_dt[, mean(height, na.rm=T)]
 ## [1] 174.358
 ```
 
+
+
 --
 
 Note that we don't keep anything unless we assign the result to a new object. If you want to add the new aggregated column to your original dataset, use `:=`.
@@ -1208,12 +1239,12 @@ starwars_dt[, mean_height := mean(height, na.rm=T)] %&gt;% ## Add mean height as
 ```
 
 ```
-##              name height mean_height
-## 1: Luke Skywalker    172     174.358
-## 2:          C-3PO    167     174.358
-## 3:          R2-D2     96     174.358
-## 4:    Darth Vader    202     174.358
-## 5:    Leia Organa    150     174.358
+##                     name height mean_height
+## 1: Wicket Systri Warrick     88     174.358
+## 2:                 IG-88    200     174.358
+## 3:        Luke Skywalker    172     174.358
+## 4:           Leia Organa    150     174.358
+## 5:        Wedge Antilles    170     174.358
 ```
 
 ---
@@ -1267,9 +1298,9 @@ starwars_dt[, .(mean_height = mean(height, na.rm=T)), by = .(species, homeworld)
 
 ```
 ##    species homeworld mean_height
-## 1:   Human  Tatooine    179.2500
-## 2:   Droid  Tatooine    132.0000
-## 3:   Droid     Naboo     96.0000
+## 1:    Ewok     Endor     88.0000
+## 2:   Droid      &lt;NA&gt;    148.0000
+## 3:   Human  Tatooine    179.2500
 ## 4:   Human  Alderaan    176.3333
 ```
 
@@ -1284,8 +1315,8 @@ One solution is to again use `.()` and write everything out, e.g.
 
 ```r
 ## Run yourself if you'd like to check the output
-starwars_dt[, 
-            .(mean(height, na.rm=T), mean(mass, na.rm=T), mean(birth_year, na.rm=T)), 
+starwars_dt[,
+            .(mean(height, na.rm=T), mean(mass, na.rm=T), mean(birth_year, na.rm=T)),
             by = species]
 ```
 --
@@ -1304,17 +1335,17 @@ Fortunately, the answer is "no". data.table provides a special `.SD` symbol for 
 
 
 ```r
-starwars_dt[, 
+starwars_dt[,
             lapply(.SD, mean, na.rm=T),
             .SDcols = c("height", "mass", "birth_year"),
-            by = species] %&gt;% 
+            by = species] %&gt;%
   head(2) ## Just keep everything on the slide
 ```
 
 ```
-##    species   height     mass birth_year
-## 1:   Human 176.6452 82.78182   53.41200
-## 2:   Droid 131.2000 69.75000   53.33333
+##    species height  mass birth_year
+## 1:    Ewok   88.0 20.00    8.00000
+## 2:   Droid  131.2 69.75   53.33333
 ```
 
 ---
@@ -1324,7 +1355,7 @@ count: false
 
 
 ```r
-starwars_dt[, 
+starwars_dt[,
 *           lapply(.SD, mean, na.rm=T),
             .SDcols = c("height", "mass", "birth_year"),
             by = species] %&gt;%
@@ -1332,9 +1363,9 @@ starwars_dt[,
 ```
 
 ```
-##    species   height     mass birth_year
-## 1:   Human 176.6452 82.78182   53.41200
-## 2:   Droid 131.2000 69.75000   53.33333
+##    species height  mass birth_year
+## 1:    Ewok   88.0 20.00    8.00000
+## 2:   Droid  131.2 69.75   53.33333
 ```
 
 First, we specify what we want to *do* on our data subset (i.e. `.SD`). In this case, we want the mean for each element, which we obtain by iterating over with the base `lapply()` function.&lt;sup&gt;1&lt;/sup&gt;
@@ -1350,17 +1381,17 @@ count: false
 
 
 ```r
-starwars_dt[, 
-            lapply(.SD, mean, na.rm=T), 
+starwars_dt[,
+            lapply(.SD, mean, na.rm=T),
 *           .SDcols = c("height", "mass", "birth_year"),
             by = species] %&gt;%
   head(2) ## Just keep everything on the slide
 ```
 
 ```
-##    species   height     mass birth_year
-## 1:   Human 176.6452 82.78182   53.41200
-## 2:   Droid 131.2000 69.75000   53.33333
+##    species height  mass birth_year
+## 1:    Ewok   88.0 20.00    8.00000
+## 2:   Droid  131.2 69.75   53.33333
 ```
 
 First, we specify what we want to *do* on our data subset (i.e. `.SD`). In this case, we want the mean for each element, which we obtain by iterating over with the base `lapply()` function.&lt;sup&gt;1&lt;/sup&gt;
@@ -1371,6 +1402,7 @@ Then, we specify *which columns* to subset with the `.SDcols` argument.
 &lt;sup&gt;1&lt;/sup&gt; We'll learn more about iteration once we get to the programming section of the course.
 ]
 
+
 ---
 count: false
 
@@ -1378,17 +1410,17 @@ count: false
 
 
 ```r
-starwars_dt[, 
-            lapply(.SD, mean, na.rm=T), 
-            .SDcols = c("height", "mass", "birth_year"), 
+starwars_dt[,
+            lapply(.SD, mean, na.rm=T),
+            .SDcols = c("height", "mass", "birth_year"),
             by = species] %&gt;%
   head(2) ## Just keep everything on the slide
 ```
 
 ```
-##    species   height     mass birth_year
-## 1:   Human 176.6452 82.78182   53.41200
-## 2:   Droid 131.2000 69.75000   53.33333
+##    species height  mass birth_year
+## 1:    Ewok   88.0 20.00    8.00000
+## 2:   Droid  131.2 69.75   53.33333
 ```
 
 First, we specify what we want to *do* on our data subset (i.e. `.SD`). In this case, we want the mean for each element, which we obtain by iterating over with the base `lapply()` function.&lt;sup&gt;1&lt;/sup&gt;
@@ -1407,7 +1439,131 @@ P.S. One annoyance I have is that the `.()` syntax doesn't work for `.SDcols`. H
 
 Just to add: We need only specify `.SDcols` if we want to subset specific parts of the data. (You can also use shortcuts like `.SDcols = is.numeric` or `.SDcols = patterns('abc')`.)
 
-If we instead want to apply the same function on *all* the variables in our dataset, then `.SD` by itself will suffice. 
+If we instead want to apply the same function on *all* the variables in our dataset, then `.SD` by itself will suffice.
+
+--
+
+As a quick example, recall our earlier DT object that contains only numeric variables.
+
+
+```r
+DT
+```
+
+```
+##    x x_sq y z z_sq xyz xyz_sq
+## 1: 1    1 3 5   25   9     81
+## 2: 2    4 4 6   36  12    144
+```
+
+--
+
+We can obtain the mean for each variable as follows.
+
+
+```r
+DT[, lapply(.SD, mean)]
+```
+
+```
+##      x x_sq   y   z z_sq  xyz xyz_sq
+## 1: 1.5  2.5 3.5 5.5 30.5 10.5  112.5
+```
+
+
+
+---
+count: false
+
+# Efficient subsetting with .SD (cont.)
+
+
+```r
+starwars_dt[,
+*           lapply(.SD, mean, na.rm=T),
+            .SDcols = c("height", "mass", "birth_year"),
+            by = species] %&gt;%
+  head(2) ## Just keep everything on the slide
+```
+
+```
+##    species height  mass birth_year
+## 1:    Ewok   88.0 20.00    8.00000
+## 2:   Droid  131.2 69.75   53.33333
+```
+
+First, we specify what we want to *do* on our data subset (i.e. `.SD`). In this case, we want the mean for each element, which we obtain by iterating over with the base `lapply()` function.&lt;sup&gt;1&lt;/sup&gt;
+
+.footnote[
+&lt;sup&gt;1&lt;/sup&gt; We'll learn more about iteration once we get to the programming section of the course.
+]
+
+
+---
+count: false
+
+# Efficient subsetting with .SD (cont.)
+
+
+```r
+starwars_dt[,
+            lapply(.SD, mean, na.rm=T),
+*           .SDcols = c("height", "mass", "birth_year"),
+            by = species] %&gt;%
+  head(2) ## Just keep everything on the slide
+```
+
+```
+##    species height  mass birth_year
+## 1:    Ewok   88.0 20.00    8.00000
+## 2:   Droid  131.2 69.75   53.33333
+```
+
+First, we specify what we want to *do* on our data subset (i.e. `.SD`). In this case, we want the mean for each element, which we obtain by iterating over with the base `lapply()` function.&lt;sup&gt;1&lt;/sup&gt;
+
+Then, we specify *which columns* to subset with the `.SDcols` argument.
+
+.footnote[
+&lt;sup&gt;1&lt;/sup&gt; We'll learn more about iteration once we get to the programming section of the course.
+]
+
+---
+count: false
+
+# Efficient subsetting with .SD (cont.)
+
+
+```r
+starwars_dt[,
+            lapply(.SD, mean, na.rm=T),
+            .SDcols = c("height", "mass", "birth_year"),
+            by = species] %&gt;%
+  head(2) ## Just keep everything on the slide
+```
+
+```
+##    species height  mass birth_year
+## 1:    Ewok   88.0 20.00    8.00000
+## 2:   Droid  131.2 69.75   53.33333
+```
+
+First, we specify what we want to *do* on our data subset (i.e. `.SD`). In this case, we want the mean for each element, which we obtain by iterating over with the base `lapply()` function.&lt;sup&gt;1&lt;/sup&gt;
+
+Then, we specify *which columns* to subset with the `.SDcols` argument.
+
+P.S. One annoyance I have is that the `.()` syntax doesn't work for `.SDcols`. However, we can at least feed it consecutive columns without quotes, e.g. `.SDcols = height:mass`. See [here](https://rdatatable.gitlab.io/data.table/articles/datatable-intro.html#how-can-we-specify-just-the-columns-we-would-like-to-compute-the-mean-on).
+
+.footnote[
+&lt;sup&gt;1&lt;/sup&gt; We'll learn more about iteration once we get to the programming section of the course.
+]
+
+---
+
+# Efficient subsetting with .SD (cont.)
+
+Just to add: We need only specify `.SDcols` if we want to subset specific parts of the data. (You can also use shortcuts like `.SDcols = is.numeric` or `.SDcols = patterns('abc')`.)
+
+If we instead want to apply the same function on *all* the variables in our dataset, then `.SD` by itself will suffice.
 
 --
 
@@ -1439,6 +1595,8 @@ DT[, lapply(.SD, mean)]
 ```
 
 ---
+
+
 
 # keyby
 
@@ -1510,13 +1668,15 @@ Or, you can set keys on an existing data.table with the `setkey()` function.
 P.S. Use the `key()` function to see what keys are currently set for your data.table. You can only ever have one key per table at a time, but it's very easy to change them using one of the above commands.
 ---
 
+
+
 # Example
 
 Recall the [speed benchmark](#fast) that we saw at the very beginning of the lecture: data.table ended up being 75x faster than dplyr for a fairly standard summarising task.
 
 --
 
-Let's redo the benchmark, but this time include a version where we pre-assign a key. For optimal performance, the key should match the same variables that we're grouping/subsetting on. 
+Let's redo the benchmark, but this time include a version where we pre-assign a key. For optimal performance, the key should match the same variables that we're grouping/subsetting on.
 - Again, a key can be set on multiple variables, although the lead grouping variable (in the below case: "name") is the most important.
 
 --
@@ -1529,7 +1689,7 @@ Let's redo the benchmark, but this time include a version where we pre-assign a 
 storms_dt_key = as.data.table(storms, key = c("name", "year", "month", "day"))
 ## Collapse function for this keyed data.table. Everything else stays the same.
 collapse_dt_key = function() {
-  storms_dt_key[, .(wind = mean(wind), pressure = mean(pressure), category = first(category)), 
+  storms_dt_key[, .(wind = mean(wind), pressure = mean(pressure), category = first(category)),
                 by = .(name, year, month, day)]
 }
 ## Run the benchmark on all three functions.
@@ -1538,26 +1698,28 @@ microbenchmark(collapse_dplyr(), collapse_dt(), collapse_dt_key(), times = 10)
 ]
 
 .right[*See next slide for results*]
+
 ---
+
 
 # Example (cont.)
 
 
 ```
 ## Unit: milliseconds
-##               expr        min         lq       mean     median         uq
-##   collapse_dplyr() 136.026315 141.825145 144.988406 146.038585 146.809408
-##      collapse_dt()   1.864554   2.172435   2.920754   2.413377   2.920489
-##  collapse_dt_key()   1.379216   1.466942   1.848563   1.483823   1.621259
-##         max neval
-##  156.533744    10
-##    7.686398    10
-##    4.823097    10
+##               expr       min        lq      mean    median        uq        max
+##   collapse_dplyr() 93.860931 96.373862 97.394487 96.890442 98.191269 102.544731
+##      collapse_dt()  3.850228  3.896230  4.636899  4.004285  4.053588  10.432450
+##  collapse_dt_key()  1.321922  1.338691  1.614014  1.435512  1.475959   3.505582
+##  neval
+##     10
+##     10
+##     10
 ```
 
 --
 
-The keyed data.table version is now **98** (!!!) faster than dplyr.
+The keyed data.table version is now **67** (!!!) faster than dplyr.
 --
 
 - That thing you feel... is your face melting.
@@ -1598,7 +1760,7 @@ I'm going to keep things brief by simply showing you how to repeat the same left
 
 ```r
 # library(nycflights13) ## Already loaded
-flights_dt = as.data.table(flights) 
+flights_dt = as.data.table(flights)
 planes_dt = as.data.table(planes)
 ```
 
@@ -1613,8 +1775,8 @@ Here's a comparison with the dplyr equivalents from last week. I'll let you run 
 
 ```r
 left_join(
-  flights, 
-  planes, 
+  flights,
+  planes,
   by = "tailnum"
   )
 ```
@@ -1625,8 +1787,8 @@ left_join(
 
 ```r
 merge(
-  flights_dt, 
-  planes_dt, 
+  flights_dt,
+  planes_dt,
   all.x = TRUE, ## omit for inner join
   by = "tailnum")
 ```
@@ -1634,7 +1796,7 @@ merge(
 
 --
 
-If you run these, you'll see that both methods handle the ambiguous "year" columns by creating "year.x" and "year.y" variants. We avoided this in dplyr by using `rename()`. How might you avoid the same thing in data.table? 
+If you run these, you'll see that both methods handle the ambiguous "year" columns by creating "year.x" and "year.y" variants. We avoided this in dplyr by using `rename()`. How might you avoid the same thing in data.table?
 
 --
 &lt;b&gt;Possible answer:&lt;/b&gt; Use `setnames()`.
@@ -1643,8 +1805,8 @@ If you run these, you'll see that both methods handle the ambiguous "year" colum
 ```r
 merge(
 * setnames(flights_dt, old = "year", new = "year_built"),
-  planes_dt, 
-  all.x = TRUE, 
+  planes_dt,
+  all.x = TRUE,
   by = "tailnum")
 ```
 
@@ -1667,14 +1829,14 @@ microbenchmark(merge_dt(), merge_dt_key(), times = 10)
 
 ```
 ## Unit: milliseconds
-##            expr      min       lq     mean   median       uq      max neval
-##      merge_dt() 66.23350 69.10877 86.21858 73.74832 79.06976 145.4771    10
-##  merge_dt_key() 38.06632 41.93725 59.42474 46.89623 52.62142 121.6428    10
+##            expr      min       lq     mean   median        uq       max neval
+##      merge_dt() 50.55919 55.03049 74.53085 62.11094 107.83455 118.65215    10
+##  merge_dt_key() 29.05051 31.41285 46.12807 38.70507  41.30672  89.99369    10
 ```
 
 --
 
-So, we get about a 2x speed-up for this simple case. Trust me, though: For really big datasets with complicated joins, ordering your data by setting keys will make a huge difference. (FWIW, the same is true for dplyr. See [here](https://tysonbarrett.com//jekyll/update/2019/10/11/speed_of_joins/).) 
+So, we get about a 2x speed-up for this simple case. Trust me, though: For really big datasets with complicated joins, ordering your data by setting keys will make a huge difference. (FWIW, the same is true for dplyr. See [here](https://tysonbarrett.com//jekyll/update/2019/10/11/speed_of_joins/).)
 
 ---
 name: reshape
@@ -1701,7 +1863,7 @@ However, I also want to flag the [**tidyfast**](https://tysonbarrett.com/tidyfas
 
 --
 
-I'll demonstrate reshaping with both options on the same fake "stocks" data that we created last time: 
+I'll demonstrate reshaping with both options on the same fake "stocks" data that we created last time:
 
 
 ```r
@@ -1722,9 +1884,9 @@ stocks
 ```
 
 ```
-##          time          X         Y          Z
-## 1: 2009-01-01 -0.2240315 -1.270754  2.4088706
-## 2: 2009-01-02  1.3321825 -1.162067 -0.3782444
+##          time          X          Y         Z
+## 1: 2009-01-01 -0.4105827  3.5158984 -2.460965
+## 2: 2009-01-02 -0.4205304 -0.5169784 -1.913041
 ```
 
 To convert this into long format, we could do either of the following:
@@ -1738,30 +1900,30 @@ melt(stocks, id.vars ="time")
 
 ```
 ##          time variable      value
-## 1: 2009-01-01        X -0.2240315
-## 2: 2009-01-02        X  1.3321825
-## 3: 2009-01-01        Y -1.2707539
-## 4: 2009-01-02        Y -1.1620666
-## 5: 2009-01-01        Z  2.4088706
-## 6: 2009-01-02        Z -0.3782444
+## 1: 2009-01-01        X -0.4105827
+## 2: 2009-01-02        X -0.4205304
+## 3: 2009-01-01        Y  3.5158984
+## 4: 2009-01-02        Y -0.5169784
+## 5: 2009-01-01        Z -2.4609647
+## 6: 2009-01-02        Z -1.9130410
 ```
 ]]
 
 .pull-right[.small90[
 
 ```r
-stocks %&gt;% 
+stocks %&gt;%
   dt_pivot_longer(X:Z, names_to="stock", values_to="price")
 ```
 
 ```
 ##          time stock      price
-## 1: 2009-01-01     X -0.2240315
-## 2: 2009-01-02     X  1.3321825
-## 3: 2009-01-01     Y -1.2707539
-## 4: 2009-01-02     Y -1.1620666
-## 5: 2009-01-01     Z  2.4088706
-## 6: 2009-01-02     Z -0.3782444
+## 1: 2009-01-01     X -0.4105827
+## 2: 2009-01-02     X -0.4205304
+## 3: 2009-01-01     Y  3.5158984
+## 4: 2009-01-02     Y -0.5169784
+## 5: 2009-01-01     Z -2.4609647
+## 6: 2009-01-02     Z -1.9130410
 ```
 ]]
 
@@ -1773,19 +1935,19 @@ Let's quickly save the long-format stocks data.table. I'll use the `melt()` appr
 
 
 ```r
-stocks_long = melt(stocks, id.vars ="time", 
+stocks_long = melt(stocks, id.vars ="time",
                    variable.name = "stock", value.name = "price")
 stocks_long
 ```
 
 ```
 ##          time stock      price
-## 1: 2009-01-01     X -0.2240315
-## 2: 2009-01-02     X  1.3321825
-## 3: 2009-01-01     Y -1.2707539
-## 4: 2009-01-02     Y -1.1620666
-## 5: 2009-01-01     Z  2.4088706
-## 6: 2009-01-02     Z -0.3782444
+## 1: 2009-01-01     X -0.4105827
+## 2: 2009-01-02     X -0.4205304
+## 3: 2009-01-01     Y  3.5158984
+## 4: 2009-01-02     Y -0.5169784
+## 5: 2009-01-01     Z -2.4609647
+## 6: 2009-01-02     Z -1.9130410
 ```
 
 --
@@ -1793,30 +1955,30 @@ stocks_long
 .pull-left[.small90[
 
 ```r
-dcast(stocks_long, 
-      time ~ stock, 
+dcast(stocks_long,
+      time ~ stock,
       value.var = "price")
 ```
 
 ```
-##          time          X         Y          Z
-## 1: 2009-01-01 -0.2240315 -1.270754  2.4088706
-## 2: 2009-01-02  1.3321825 -1.162067 -0.3782444
+##          time          X          Y         Z
+## 1: 2009-01-01 -0.4105827  3.5158984 -2.460965
+## 2: 2009-01-02 -0.4205304 -0.5169784 -1.913041
 ```
 ]]
 
 .pull-right[.small90[
 
 ```r
-stocks_long %&gt;% 
-  dt_pivot_wider(names_from=stock, 
+stocks_long %&gt;%
+  dt_pivot_wider(names_from=stock,
                  values_from=price)
 ```
 
 ```
-##          time          X         Y          Z
-## 1: 2009-01-01 -0.2240315 -1.270754  2.4088706
-## 2: 2009-01-02  1.3321825 -1.162067 -0.3782444
+##          time          X          Y         Z
+## 1: 2009-01-01 -0.4105827  3.5158984 -2.460965
+## 2: 2009-01-02 -0.4205304 -0.5169784 -1.913041
 ```
 ]]
 
@@ -1854,7 +2016,7 @@ DT
 # melt
 colA = paste("dob_child", 1:3, sep = "")
 colB = paste("gender_child", 1:3, sep = "")
-DT.m2 = melt(DT, measure = list(colA, colB), 
+DT.m2 = melt(DT, measure = list(colA, colB),
              value.name = c("dob", "gender"))
 ```
 ]
@@ -1899,7 +2061,7 @@ class: inverse, center, middle
 
 # Choosing a workflow that works for you
 
-When it comes to data work in R, we truly are spoilt for choice. 
+When it comes to data work in R, we truly are spoilt for choice.
 
 We have two incredible data wrangling ecosystems to choose from.
 - **tidyverse** (esp. **dplyr** and **tidyr**)
@@ -1919,7 +2081,7 @@ These next few slides offer a few additional thoughts on how data.table and the 
 
 # Pick and choose
 
-The first point is perhaps the most obvious one: The tidyverse consists of *multiple* packages. Just because you prefer to use data.table instead of dplyr+tidyr for your data.wrangling needs, doesn't mean that other tidyverse packages are off limits too.  
+The first point is perhaps the most obvious one: The tidyverse consists of *multiple* packages. Just because you prefer to use data.table instead of dplyr+tidyr for your data.wrangling needs, doesn't mean that other tidyverse packages are off limits too.
 
 Case in point: Almost every hardcore data.table user I know is a hardcore **ggplot2** user too.
 
@@ -1928,12 +2090,12 @@ Case in point: Almost every hardcore data.table user I know is a hardcore **ggpl
 
 ```r
 ## library(ggplot2) # already loaded
-storms_dt[, .(wind = mean(wind), 
-                  pressure = mean(pressure), 
-                  category = first(category)), 
+storms_dt[, .(wind = mean(wind),
+                  pressure = mean(pressure),
+                  category = first(category)),
                 by = .(name, year, month, day)] %&gt;%
   ggplot(aes(x = pressure, y = wind, col=category)) +
-  geom_point(alpha = 0.3) + 
+  geom_point(alpha = 0.3) +
   theme_minimal()
 ```
 ]]
@@ -1966,13 +2128,13 @@ starwars_dt %&gt;% group_by(homeworld) %&gt;% summarise(height = mean(height, na
 
 --
 
-**Bottom line:** Don't be a fanatic. Insisting on ecosystem purity is rarely worth it. 
+**Bottom line:** Don't be a fanatic. Insisting on ecosystem purity is rarely worth it.
 
 ---
 
 # dtplyr
 
-Do you love dplyr's syntax, but want data.table's performance? 
+Do you love dplyr's syntax, but want data.table's performance?
 --
 Well, you're in luck!
 
@@ -1992,7 +2154,7 @@ If this sounds appealing to you (and it should) I strongly encourage you to chec
 storms_dtplyr = lazy_dt(storms) ## dtplyr requires objects to be set as "lazy" data.tables
 collapse_dtplyr = function() {
   storms_dtplyr %&gt;%
-    group_by(name, year, month, day) %&gt;% 
+    group_by(name, year, month, day) %&gt;%
     summarize(wind = mean(wind), pressure = mean(pressure), category = first(category)) %&gt;%
     as_tibble()
 }
@@ -2010,14 +2172,14 @@ microbenchmark::microbenchmark(collapse_dplyr(), collapse_dt(), collapse_dtplyr(
 
 ```
 ## Unit: milliseconds
-##               expr        min         lq       mean     median         uq
-##   collapse_dplyr() 134.114441 145.430780 150.673383 148.282573 155.434974
-##      collapse_dt()   2.194569   2.412785   2.583555   2.606886   2.758593
-##  collapse_dtplyr()   3.167961   3.791454   4.743383   4.524771   4.954700
+##               expr       min         lq       mean     median         uq
+##   collapse_dplyr() 97.656834 100.076982 101.764062 100.921357 103.430495
+##      collapse_dt()  3.941740   4.043338   4.117860   4.114494   4.137638
+##  collapse_dtplyr()  4.508975   4.688842   5.349897   4.808849   5.806420
 ##         max neval
-##  179.675328    10
-##    2.839397    10
-##    8.593102    10
+##  107.331645    10
+##    4.362974    10
+##    7.711854    10
 ```
 
 --
@@ -2034,7 +2196,7 @@ lazy_dt(starwars) %&gt;% filter(species=="Human") %&gt;% group_by(gender) %&gt;%
 ```
 
 ```
-## Source: local data table [?? x 2]
+## Source: local data table [2 x 2]
 ## Call:   `_DT2`[species == "Human"][, .(height = mean(height, na.rm = TRUE)), 
 ##     keyby = .(gender)]
 ## 
@@ -2100,6 +2262,7 @@ class: inverse, center, middle
 
 # Next lecture: Websrcaping (1)
 &lt;html&gt;&lt;div style='float:left'&gt;&lt;/div&gt;&lt;hr color='#EB811B' size=1px width=796px&gt;&lt;/html&gt;
+
     </textarea>
 <style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
 <script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
@@ -2149,6 +2312,19 @@ if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
     deleted = true;
   });
 })();
+// add `data-at-shortcutkeys` attribute to <body> to resolve conflicts with JAWS
+// screen reader (see PR #262)
+(function(d) {
+  let res = {};
+  d.querySelectorAll('.remark-help-content table tr').forEach(tr => {
+    const t = tr.querySelector('td:nth-child(2)').innerText;
+    tr.querySelectorAll('td:first-child .key').forEach(key => {
+      const k = key.innerText;
+      if (/^[a-z]$/.test(k)) res[k] = t;  // must be a single letter (key)
+    });
+  });
+  d.body.setAttribute('data-at-shortcutkeys', JSON.stringify(res));
+})(document);
 (function() {
   "use strict"
   // Replace <script> tags in slides area to make them executable

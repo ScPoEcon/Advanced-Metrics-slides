@@ -770,7 +770,7 @@ class: middle
 
 
 ```{r,eval=FALSE}
-ScPoApps::launchApp("simple_reg")
+ScPoApps::launchApp("reg_simple")
 ```
 
 

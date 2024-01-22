@@ -296,7 +296,7 @@ To create a data.table, we have a couple of options:
 All data.tables accept the same basic syntax:
 
 .center[
-.large2[DT[<span style='color: #66C2A5;'>i</span>, <span style='color: #FC8D62;'>j</span>, <span style='color: #8DA0CB;'>by</span>]]
+.large2[DT[<span style="color: #66C2A5;">i</span>, <span style="color: #FC8D62;">j</span>, <span style="color: #8DA0CB;">by</span>]]
 ]
 
 ![:col_row <span style='color: #66C2A5;'>On which rows?</span>, <span style='color: #FC8D62;'>What to do?</span>, <span style='color: #8DA0CB;'>Grouped by what?</span>]
@@ -474,6 +474,7 @@ starwars_dt[
 ```
 ]
 
+
 ---
 class: inverse, center, middle
 name: i
@@ -483,9 +484,10 @@ name: i
 
 ---
 
+
 # Subset by rows (filter)
 
-Subsetting by rows is very straightforward in data.table. Everything works pretty much the same as you'd expect if you're coming from dplyr. 
+Subsetting by rows is very straightforward in data.table. Everything works pretty much the same as you'd expect if you're coming from dplyr.
 
 - `DT[x == "string", ]`: Subset to rows where variable x equals "string"
 
@@ -547,6 +549,8 @@ starwars_dt[1:5, name:birth_year] ## Only print subset to stay on the slide
 starwars_dt[name %like% "Sky",.(name,height,mass)]
 ```
 
+
+
 ---
 class: inverse, center, middle
 name: j
@@ -567,7 +571,7 @@ Recall some of the dplyr verbs that we used to manipulate our variables in diffe
 
 --
 
-data.table recognizes that all of these verbs are just different versions of telling R... 
+data.table recognizes that all of these verbs are just different versions of telling R...
 >"*Do something to this variable in my dataset*"
 
 ... and it let's you do all of those operations in one place: the `j` slot.
@@ -606,6 +610,7 @@ DT = data.table(x = 1:2)
 DT[, x_sq := x^2][] ## Adding [] prints the result.
 ```
 
+
 ---
 
 # Modifying columns `:=` (cont.)
@@ -633,19 +638,21 @@ DT
 Uh-oh! It too has been removed... exactly as modifying by reference demands. To avoid this behaviour, use the explicit [`data.table::copy()`](https://rdatatable.gitlab.io/data.table/reference/copy.html) function. Run this next chunk yourself:
 
 ```{r, highlightSpans = TRUE, eval = FALSE}
-DT[, x_sq := x^2]     
-DT_copy = copy(DT)  
+DT[, x_sq := x^2]
+DT_copy = copy(DT)
 DT_copy[, x_sq := NULL]
 DT ## x_sq is still there (run and confirm for yourself)
 ```
 ```{r mod_copy3, include=FALSE}
-DT[, x_sq := x^2]     
-DT_copy = copy(DT)  
+DT[, x_sq := x^2]
+DT_copy = copy(DT)
 DT_copy[, x_sq := NULL]
 DT ## x_sq is still there (run and confirm for yourself)
 ```
 
 ---
+
+
 
 # Modifying columns `:=` (cont.)
 
@@ -659,7 +666,7 @@ DT2 = data.table(a = -2:2, b = LETTERS[1:5])
 
 --
 
-Now, imagine we want to locate all rows where "a" is negative and replace the corresponding "b" cell with NA. 
+Now, imagine we want to locate all rows where "a" is negative and replace the corresponding "b" cell with NA.
 
 --
 
@@ -724,7 +731,7 @@ mod_dplyr <- function(){
                      "red","red, blue"), "funky",
                  ifelse(c("blue","white","yellow"), "light", NA)
           )
-        ), 
+        ),
       sex == "female" ~ NA_character_)
     )
 }
@@ -766,6 +773,8 @@ DT[, c("y", "y_name") :=  list(3:4 , c("three", "four"))]
 DT ## Another way to print the results instead of appending []
 ```
 
+
+
 --
 
 Note, however, that dynamically assigning dependent columns in a single step (like we did with dplyr::mutate) doesn't work.
@@ -785,7 +794,7 @@ That last example provides as good a time as any to mention that you can chain m
 The native data.table way is simply to append consecutive `[]` terms.
 
 ```{r mod_cols3, cache=FALSE}
-DT[, z := 5:6][, z_sq := z^2][] 
+DT[, z := 5:6][, z_sq := z^2][]
 ```
 
 --
@@ -797,7 +806,7 @@ But if you prefer the **magrittr** pipe, then that's also possible. Just prefix 
 DT %>%
   .[, xyz := x+y+z] %>%
   .[, xyz_sq := xyz^2] %>%
-  .[] 
+  .[]
 ```
 
 ---
@@ -836,10 +845,12 @@ starwars_dt[1:2, .(name, height, mass, homeworld)]
 
 ---
 
+
+
 # Aside: What's with the .()?
 
 We've now seen `.()` in a couple places, e.g the previous slide and [this slide](#fast) from earlier if you were paying close attention.
-- `.()` is just a data.table shortcut for `list()`. 
+- `.()` is just a data.table shortcut for `list()`.
 
 We'll be using `.()` quite liberally once we start working subsetting and/or grouping by multiple variables at a time.
 
@@ -890,12 +901,12 @@ starwars_dt[1:2, .(alias = name, crib = homeworld)]
 
 # Subsetting on columns (cont.)
 
-One last thing I'll mention w.r.t. to subsetting columns is that you can also use dplyr verbs on data.tables if you prefer. 
+One last thing I'll mention w.r.t. to subsetting columns is that you can also use dplyr verbs on data.tables if you prefer.
 
 For example run the following code chunk for yourself. (You'll get a warning about efficiency loss, but this will be very minor for a case like this.)
 
 ```{r rename2, eval=FALSE}
-starwars_dt[1:5, ] %>% 
+starwars_dt[1:5, ] %>%
   select(crib = homeworld, everything())
 ```
 
@@ -912,6 +923,8 @@ Finally, we can do aggregating manipulations in `j`.
 ```{r simple_agg1, cache=FALSE}
 starwars_dt[, mean(height, na.rm=T)]
 ```
+
+
 
 --
 
@@ -975,8 +988,8 @@ One solution is to again use `.()` and write everything out, e.g.
 
 ```{r, eval=FALSE}
 ## Run yourself if you'd like to check the output
-starwars_dt[, 
-            .(mean(height, na.rm=T), mean(mass, na.rm=T), mean(birth_year, na.rm=T)), 
+starwars_dt[,
+            .(mean(height, na.rm=T), mean(mass, na.rm=T), mean(birth_year, na.rm=T)),
             by = species]
 ```
 --
@@ -994,10 +1007,10 @@ Fortunately, the answer is "no". data.table provides a special `.SD` symbol for 
 # Efficient subsetting with .SD (cont.)
 
 ```{r sd_cols1}
-starwars_dt[, 
+starwars_dt[,
             lapply(.SD, mean, na.rm=T),
             .SDcols = c("height", "mass", "birth_year"),
-            by = species] %>% 
+            by = species] %>%
   head(2) ## Just keep everything on the slide
 ```
 
@@ -1007,7 +1020,7 @@ count: false
 # Efficient subsetting with .SD (cont.)
 
 ```{r sd_cols2}
-starwars_dt[, 
+starwars_dt[,
             lapply(.SD, mean, na.rm=T), #<<
             .SDcols = c("height", "mass", "birth_year"),
             by = species] %>%
@@ -1026,8 +1039,8 @@ count: false
 # Efficient subsetting with .SD (cont.)
 
 ```{r sd_cols3}
-starwars_dt[, 
-            lapply(.SD, mean, na.rm=T), 
+starwars_dt[,
+            lapply(.SD, mean, na.rm=T),
             .SDcols = c("height", "mass", "birth_year"), #<<
             by = species] %>%
   head(2) ## Just keep everything on the slide
@@ -1041,15 +1054,16 @@ Then, we specify *which columns* to subset with the `.SDcols` argument.
 <sup>1</sup> We'll learn more about iteration once we get to the programming section of the course.
 ]
 
+
 ---
 count: false
 
 # Efficient subsetting with .SD (cont.)
 
 ```{r sd_cols4}
-starwars_dt[, 
-            lapply(.SD, mean, na.rm=T), 
-            .SDcols = c("height", "mass", "birth_year"), 
+starwars_dt[,
+            lapply(.SD, mean, na.rm=T),
+            .SDcols = c("height", "mass", "birth_year"),
             by = species] %>%
   head(2) ## Just keep everything on the slide
 ```
@@ -1070,7 +1084,97 @@ P.S. One annoyance I have is that the `.()` syntax doesn't work for `.SDcols`. H
 
 Just to add: We need only specify `.SDcols` if we want to subset specific parts of the data. (You can also use shortcuts like `.SDcols = is.numeric` or `.SDcols = patterns('abc')`.)
 
-If we instead want to apply the same function on *all* the variables in our dataset, then `.SD` by itself will suffice. 
+If we instead want to apply the same function on *all* the variables in our dataset, then `.SD` by itself will suffice.
+
+--
+
+As a quick example, recall our earlier DT object that contains only numeric variables.
+
+```{r, cache=FALSE}
+DT
+```
+
+--
+
+We can obtain the mean for each variable as follows.
+
+```{r, cache=FALSE}
+DT[, lapply(.SD, mean)]
+```
+
+
+
+---
+count: false
+
+# Efficient subsetting with .SD (cont.)
+
+```{r sd_cols_1}
+starwars_dt[,
+            lapply(.SD, mean, na.rm=T), #<<
+            .SDcols = c("height", "mass", "birth_year"),
+            by = species] %>%
+  head(2) ## Just keep everything on the slide
+```
+
+First, we specify what we want to *do* on our data subset (i.e. `.SD`). In this case, we want the mean for each element, which we obtain by iterating over with the base `lapply()` function.<sup>1</sup>
+
+.footnote[
+<sup>1</sup> We'll learn more about iteration once we get to the programming section of the course.
+]
+
+
+---
+count: false
+
+# Efficient subsetting with .SD (cont.)
+
+```{r sd_cols3_}
+starwars_dt[,
+            lapply(.SD, mean, na.rm=T),
+            .SDcols = c("height", "mass", "birth_year"), #<<
+            by = species] %>%
+  head(2) ## Just keep everything on the slide
+```
+
+First, we specify what we want to *do* on our data subset (i.e. `.SD`). In this case, we want the mean for each element, which we obtain by iterating over with the base `lapply()` function.<sup>1</sup>
+
+Then, we specify *which columns* to subset with the `.SDcols` argument.
+
+.footnote[
+<sup>1</sup> We'll learn more about iteration once we get to the programming section of the course.
+]
+
+---
+count: false
+
+# Efficient subsetting with .SD (cont.)
+
+```{r sd_cols4_}
+starwars_dt[,
+            lapply(.SD, mean, na.rm=T),
+            .SDcols = c("height", "mass", "birth_year"),
+            by = species] %>%
+  head(2) ## Just keep everything on the slide
+```
+
+First, we specify what we want to *do* on our data subset (i.e. `.SD`). In this case, we want the mean for each element, which we obtain by iterating over with the base `lapply()` function.<sup>1</sup>
+
+Then, we specify *which columns* to subset with the `.SDcols` argument.
+
+P.S. One annoyance I have is that the `.()` syntax doesn't work for `.SDcols`. However, we can at least feed it consecutive columns without quotes, e.g. `.SDcols = height:mass`. See [here](https://rdatatable.gitlab.io/data.table/articles/datatable-intro.html#how-can-we-specify-just-the-columns-we-would-like-to-compute-the-mean-on).
+
+.footnote[
+<sup>1</sup> We'll learn more about iteration once we get to the programming section of the course.
+]
+
+---
+
+# Efficient subsetting with .SD (cont.)
+
+Just to add: We need only specify `.SDcols` if we want to subset specific parts of the data. (You can also use shortcuts like `.SDcols = is.numeric` or `.SDcols = patterns('abc')`.)
+
+If we instead want to apply the same function on *all* the variables in our dataset, then `.SD` by itself will suffice.
 
 --
 
@@ -1089,6 +1193,8 @@ DT[, lapply(.SD, mean)]
 ```
 
 ---
+
+
 
 # keyby
 
@@ -1160,13 +1266,15 @@ Or, you can set keys on an existing data.table with the `setkey()` function.
 P.S. Use the `key()` function to see what keys are currently set for your data.table. You can only ever have one key per table at a time, but it's very easy to change them using one of the above commands.
 ---
 
+
+
 # Example
 
 Recall the [speed benchmark](#fast) that we saw at the very beginning of the lecture: data.table ended up being 75x faster than dplyr for a fairly standard summarising task.
 
 --
 
-Let's redo the benchmark, but this time include a version where we pre-assign a key. For optimal performance, the key should match the same variables that we're grouping/subsetting on. 
+Let's redo the benchmark, but this time include a version where we pre-assign a key. For optimal performance, the key should match the same variables that we're grouping/subsetting on.
 - Again, a key can be set on multiple variables, although the lead grouping variable (in the below case: "name") is the most important.
 
 --
@@ -1178,7 +1286,7 @@ Let's redo the benchmark, but this time include a version where we pre-assign a 
 storms_dt_key = as.data.table(storms, key = c("name", "year", "month", "day"))
 ## Collapse function for this keyed data.table. Everything else stays the same.
 collapse_dt_key = function() {
-  storms_dt_key[, .(wind = mean(wind), pressure = mean(pressure), category = first(category)), 
+  storms_dt_key[, .(wind = mean(wind), pressure = mean(pressure), category = first(category)),
                 by = .(name, year, month, day)]
 }
 ## Run the benchmark on all three functions.
@@ -1187,11 +1295,13 @@ microbenchmark(collapse_dplyr(), collapse_dt(), collapse_dt_key(), times = 10)
 ]
 
 .right[*See next slide for results*]
+
 ---
+
 
 # Example (cont.)
 
-```{r collapse_comp_key, dependson=collapse_dt, dependson=collapse_dplyr, echo=FALSE, message=FALSE}
+```{r collapse_comp_key,echo=FALSE, message=FALSE}
 storms_dt_key = as.data.table(storms, key = c("name", "year", "month", "day"))
 collapse_dt_key = function() {
   storms_dt_key[, .(wind = mean(wind), pressure = mean(pressure), category = first(category)),
@@ -1245,7 +1355,7 @@ I'm going to keep things brief by simply showing you how to repeat the same left
 
 ```{r nycflights13}
 # library(nycflights13) ## Already loaded
-flights_dt = as.data.table(flights) 
+flights_dt = as.data.table(flights)
 planes_dt = as.data.table(planes)
 ```
 
@@ -1259,8 +1369,8 @@ Here's a comparison with the dplyr equivalents from last week. I'll let you run 
 **dplyr**
 ```{r, eval = FALSE}
 left_join(
-  flights, 
-  planes, 
+  flights,
+  planes,
   by = "tailnum"
   )
 ```
@@ -1270,8 +1380,8 @@ left_join(
 **data.table**
 ```{r, eval = FALSE}
 merge(
-  flights_dt, 
-  planes_dt, 
+  flights_dt,
+  planes_dt,
   all.x = TRUE, ## omit for inner join
   by = "tailnum")
 ```
@@ -1279,7 +1389,7 @@ merge(
 
 --
 
-If you run these, you'll see that both methods handle the ambiguous "year" columns by creating "year.x" and "year.y" variants. We avoided this in dplyr by using `rename()`. How might you avoid the same thing in data.table? 
+If you run these, you'll see that both methods handle the ambiguous "year" columns by creating "year.x" and "year.y" variants. We avoided this in dplyr by using `rename()`. How might you avoid the same thing in data.table?
 
 --
 <b>Possible answer:</b> Use `setnames()`.
@@ -1287,8 +1397,8 @@ If you run these, you'll see that both methods handle the ambiguous "year" colum
 ```{r, eval = FALSE}
 merge(
   setnames(flights_dt, old = "year", new = "year_built"), #<<
-  planes_dt, 
-  all.x = TRUE, 
+  planes_dt,
+  all.x = TRUE,
   by = "tailnum")
 ```
 
@@ -1310,7 +1420,7 @@ microbenchmark(merge_dt(), merge_dt_key(), times = 10)
 
 --
 
-So, we get about a 2x speed-up for this simple case. Trust me, though: For really big datasets with complicated joins, ordering your data by setting keys will make a huge difference. (FWIW, the same is true for dplyr. See [here](https://tysonbarrett.com//jekyll/update/2019/10/11/speed_of_joins/).) 
+So, we get about a 2x speed-up for this simple case. Trust me, though: For really big datasets with complicated joins, ordering your data by setting keys will make a huge difference. (FWIW, the same is true for dplyr. See [here](https://tysonbarrett.com//jekyll/update/2019/10/11/speed_of_joins/).)
 
 ---
 name: reshape
@@ -1337,7 +1447,7 @@ However, I also want to flag the [**tidyfast**](https://tysonbarrett.com/tidyfas
 
 --
 
-I'll demonstrate reshaping with both options on the same fake "stocks" data that we created last time: 
+I'll demonstrate reshaping with both options on the same fake "stocks" data that we created last time:
 
 ```{r stocks}
 stocks = data.table(time = as.Date('2009-01-01') + 0:1,
@@ -1351,7 +1461,7 @@ stocks = data.table(time = as.Date('2009-01-01') + 0:1,
 # Reshape from wide to long
 
 Our data are currently in wide format.
-```{r stocks_print, dependson=stocks}
+```{r stocks_print}
 stocks
 ```
 
@@ -1366,7 +1476,7 @@ melt(stocks, id.vars ="time")
 
 .pull-right[.small90[
 ```{r dt_pivot_longer}
-stocks %>% 
+stocks %>%
   dt_pivot_longer(X:Z, names_to="stock", values_to="price")
 ```
 ]]
@@ -1378,7 +1488,7 @@ stocks %>%
 Let's quickly save the long-format stocks data.table. I'll use the `melt()` approach and also throw in some extra column-naming options, just so you can see those in action.
 
 ```{r stocks_long}
-stocks_long = melt(stocks, id.vars ="time", 
+stocks_long = melt(stocks, id.vars ="time",
                    variable.name = "stock", value.name = "price")
 stocks_long
 ```
@@ -1387,16 +1497,16 @@ stocks_long
 
 .pull-left[.small90[
 ```{r dcast}
-dcast(stocks_long, 
-      time ~ stock, 
+dcast(stocks_long,
+      time ~ stock,
       value.var = "price")
 ```
 ]]
 
 .pull-right[.small90[
 ```{r dt_pivot_wider}
-stocks_long %>% 
-  dt_pivot_wider(names_from=stock, 
+stocks_long %>%
+  dt_pivot_wider(names_from=stock,
                  values_from=price)
 ```
 ]]
@@ -1423,7 +1533,7 @@ DT
 # melt
 colA = paste("dob_child", 1:3, sep = "")
 colB = paste("gender_child", 1:3, sep = "")
-DT.m2 = melt(DT, measure = list(colA, colB), 
+DT.m2 = melt(DT, measure = list(colA, colB),
              value.name = c("dob", "gender"))
 ```
 ]
@@ -1448,7 +1558,7 @@ class: inverse, center, middle
 
 # Choosing a workflow that works for you
 
-When it comes to data work in R, we truly are spoilt for choice. 
+When it comes to data work in R, we truly are spoilt for choice.
 
 We have two incredible data wrangling ecosystems to choose from.
 - **tidyverse** (esp. **dplyr** and **tidyr**)
@@ -1468,7 +1578,7 @@ These next few slides offer a few additional thoughts on how data.table and the 
 
 # Pick and choose
 
-The first point is perhaps the most obvious one: The tidyverse consists of *multiple* packages. Just because you prefer to use data.table instead of dplyr+tidyr for your data.wrangling needs, doesn't mean that other tidyverse packages are off limits too.  
+The first point is perhaps the most obvious one: The tidyverse consists of *multiple* packages. Just because you prefer to use data.table instead of dplyr+tidyr for your data.wrangling needs, doesn't mean that other tidyverse packages are off limits too.
 
 Case in point: Almost every hardcore data.table user I know is a hardcore **ggplot2** user too.
 
@@ -1476,20 +1586,20 @@ Case in point: Almost every hardcore data.table user I know is a hardcore **ggpl
 .small75[
 ```{r eval = FALSE}
 ## library(ggplot2) # already loaded
-storms_dt[, .(wind = mean(wind), 
-                  pressure = mean(pressure), 
-                  category = first(category)), 
+storms_dt[, .(wind = mean(wind),
+                  pressure = mean(pressure),
+                  category = first(category)),
                 by = .(name, year, month, day)] %>%
   ggplot(aes(x = pressure, y = wind, col=category)) +
-  geom_point(alpha = 0.3) + 
+  geom_point(alpha = 0.3) +
   theme_minimal()
 ```
 ]]
 .pull-right[
 ```{r storms_ggplot, echo = FALSE, fig.height=6}
-collapse_dt_key() %>% 
-  ggplot(aes(x = pressure, y = wind, col=category)) + 
-  geom_point(alpha = 0.3) + 
+collapse_dt_key() %>%
+  ggplot(aes(x = pressure, y = wind, col=category)) +
+  geom_point(alpha = 0.3) +
   theme_minimal() +
   coord_equal()
 ```
@@ -1519,13 +1629,13 @@ starwars_dt %>% group_by(homeworld) %>% summarise(height = mean(height, na.rm=T)
 
 --
 
-**Bottom line:** Don't be a fanatic. Insisting on ecosystem purity is rarely worth it. 
+**Bottom line:** Don't be a fanatic. Insisting on ecosystem purity is rarely worth it.
 
 ---
 
 # dtplyr
 
-Do you love dplyr's syntax, but want data.table's performance? 
+Do you love dplyr's syntax, but want data.table's performance?
 --
 Well, you're in luck!
 
@@ -1544,7 +1654,7 @@ If this sounds appealing to you (and it should) I strongly encourage you to chec
 storms_dtplyr = lazy_dt(storms) ## dtplyr requires objects to be set as "lazy" data.tables
 collapse_dtplyr = function() {
   storms_dtplyr %>%
-    group_by(name, year, month, day) %>% 
+    group_by(name, year, month, day) %>%
     summarize(wind = mean(wind), pressure = mean(pressure), category = first(category)) %>%
     as_tibble()
 }
@@ -1564,7 +1674,7 @@ microbenchmark::microbenchmark(collapse_dplyr(), collapse_dt(), collapse_dtplyr(
 storms_dtplyr = lazy_dt(storms) ## dtplyr requires objects to be set as "lazy" data.tables
 collapse_dtplyr = function() {
   storms_dtplyr %>%
-    group_by(name, year, month, day) %>% 
+    group_by(name, year, month, day) %>%
     summarize(wind = mean(wind), pressure = mean(pressure), category = first(category)) %>%
     as_tibble()
 }
@@ -1638,3 +1748,4 @@ class: inverse, center, middle
 
 # Next lecture: Websrcaping (1)
 <html><div style='float:left'></div><hr color='#EB811B' size=1px width=796px></html>
+
