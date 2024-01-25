@@ -76,13 +76,11 @@ longeval = FALSE
 
 1. Communication: Slack Intro
 
-2. Zoom: How to use
+2. Who Am I
 
-3. Who Am I
+3. This Course 
 
-4. This Course 
-
-5. Recap 1 of topics from intro course
+4. Recap 1 of topics from intro course
 
 ]
 
@@ -103,25 +101,23 @@ longeval = FALSE
 # Who Am I
 
 .pull-left[
-* I'm an Assistant Prof in the Dept of Economics at SciencesPo Paris. Check out my [website](https://floswald.github.io)!
+* I'm a Professor in the Dept of Economics at SciencesPo Paris. Check out my [website](https://floswald.github.io)!
 
-* I work on housing, urban, macro and labor topics:
-    1. How to explain long run house price increase and city growth?
+* I work on urban, macro and IO topics:
+    1. How to explain City Growth?
     2. How is fertility related to housing costs?
-    3. What is the impact of Airbnb on long term rental markets?
-    4. How do people decide to move from one place to another and what are the implications for labor and housing markets?
-    
+    3. How do people and firms decide where to locate?
 ]
+
+--
 
 .pull-right[
     
 * I do a lot of computation (who doesn't). I like `R` (surprise!) and [`julia`](https://julialang.org) - I teach computational econ to our PhD students.
 
 * I profited *a lot* from the open source software (OSS) community (and some good friends), and I am fascinated by how it works and the huge value it creates for everyone. 
-    * OSS is key to reproducible research. 
+    * OSS is key to reproducible research. 👉 seeing that every day as [Data Editor](https://ejdataeditor.github.io)
     * I try to use and teach my students tools which enable greater reproducibility.
-    * *my students* 👆 concerns **you**!
-
 ]
 
 ---
@@ -134,11 +130,11 @@ longeval = FALSE
 
 * You are supposed to be familiar with all the econometrics material from [the slides](https://github.com/ScPoEcon/ScPoEconometrics-Slides) of that course and/or chapters 1-9 in our [textbook](https://scpoecon.github.io/ScPoEconometrics/).
 
-* We also assume you have basic `R` working knowledge at the level of the intro course! ()
+* We also assume you have basic `R` working knowledge at the level of the intro course!
     * basic `data.frame` manipulation with `dplyr`
     * simple linear models with `lm`
     * basic plotting with `ggplot2`
-    * Quiz 1 will try and test for that 😉, so be on top of [this chapter](https://r4ds.had.co.nz/transform.html)
+    * Quiz 1 will try and test for that 😉, so be on top of [this chapter](https://r4ds.hadley.nz/data-transform.html)
 
 ---
 
@@ -177,20 +173,20 @@ longeval = FALSE
 # Syllabus
 
 .pull-left[
-0. Intro, Difference-in-Differences
+0\. Intro, Difference-in-Differences
 
-1. Intro, Recap 1
+1\. Intro, Recap 1
     (*Quiz 1*)
 
-2. Recap 2
+2\. Recap 2
     (*Quiz 2*)
     
-3. Tools: `Rmarkdown` and `data.table`
+3\. Tools: `Rmarkdown` and `data.table`
 
-4. Instrumental Variables 1
+4\. Instrumental Variables 1
     (*Quiz 3*)
 
-5. Instrumental Variables 2
+5\. Instrumental Variables 2
     (*Midterm exam*)
 ]
 
@@ -832,13 +828,13 @@ and the intercept
 
 $$ \hat{\beta}_0 = \overline{y} - \hat{\beta}_1 \overline{x} $$
 
-Remember that *those* two formulae are amongst the very few ones from the intro cours that you should know by heart! ❤️
+Remember that *those* two formulae are amongst the very few ones from the intro course that you should know by heart! ❤️
 
 --
 
 We now turn to the assumptions and (implied) properties of OLS.
 
----
+
 
 ---
 layout: true
