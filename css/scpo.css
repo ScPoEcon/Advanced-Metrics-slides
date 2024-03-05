@@ -110,6 +110,13 @@ a, a > code {
   width: 48%;
 }
 
+.center {
+  margin: auto;
+  width: 60%;
+  padding: 10px;
+  text-align: center;
+}
+
 .pull-right ~ * {
   clear: both;
 }

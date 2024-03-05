@@ -39,6 +39,7 @@ knitr::opts_chunk$set(
 om = par("mar")
 lowtop = c(om[1],om[2],0.1,om[4])
 library(magrittr)
+library(ggplot2)
 
 ```
 
@@ -171,11 +172,15 @@ knitr::include_graphics("../../img/father-thames.jpg")
 background-image: url(../../img/slum.jpg)
 background-size: cover
 
-.pull-right[
+---
+background-image: url(../../img/slum.jpg)
+background-size: cover
+
+.center[
 <br>
 <br>
 <br>
-.red[
+.white[
 ## In 1850:
 
 
@@ -185,7 +190,7 @@ background-size: cover
 
 * Most human pathogens are not visible to the naked eye.
 
-* The so-called *infection theory* (i.e. infection via *germs*) has some supporters, 
+* The so-called *infection theory* (i.e. infection via *germs*) has some supporters,
 
 * but the dominant idea is that disease, in general, results from [*miasmas*](https://en.wikipedia.org/wiki/Miasma_theory)
 ]
@@ -215,7 +220,7 @@ background-size: 800px
 
 --
 
-.center[May the force be with you. (click [here!](https://itempool.com/floswald/c/pahhozoDAnF))]
+.center[May the force be with you. (click [here!](https://youtu.be/lNjrAXGRda4?si=Oj-MONvr9Exp-2xo))]
 
 
 ---
@@ -347,7 +352,7 @@ class: separator, middle
 
 # We Need A Model.
 
-## Because: *It takes a model to beat a model*
+## Because: *It takes a model to beat a model*. attributed to Thomas L Sargent.
 
 
 
