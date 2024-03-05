@@ -49,11 +49,11 @@ library(ggplot2)
 
 ## What Did we Do Last Week?
 
-* We introduced the `data.table` package.
+* We introduced the DiD method.
 
-* We compared it the `dplyr` approach.
+* We looked at the case minimum wages in NJ/Pennsylvania.
 
-* We highlighted pros and cons and the potential for using them both.
+* We highlighted some drawbacks of the method and learned the underlying assumptions.
 
 ]
 
