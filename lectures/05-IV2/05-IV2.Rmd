@@ -40,6 +40,7 @@ library(magrittr)
 library(broom)
 library(estimatr)
 library(modelsummary)
+library(ggplot2)
 gm = modelsummary::gof_map
 gm$omit <- TRUE
 gm$omit[gm$clean == "R2"] <- FALSE
@@ -738,14 +739,30 @@ rows <- data.frame(term = c("Instruments","Year of birth"),
                    SLS_all  = c("All Quarters","yes")
                    )
 names(rows)[c(3,5,6)] <- c("2SLS","2SLS_yr","2SLS_all")
-tab = msummary(models = mod[c("ols","2SLS","ols_yr","2SLS_yr","2SLS_all")], 
+tab1 = msummary(models = mod[c("ols","2SLS","ols_yr","2SLS_yr","2SLS_all")], 
                        statistic = 'std.error',
                        gof_omit = 'DF|Deviance|AIC|BIC|R2 Adj.|p.value|F$|se_type|statistic|Log.Lik.|Num.Obs.|N',
                add_rows = rows,
+               fmt = 2,
+               stars = TRUE,
+               coef_omit = 'yob_fct',
+               output = 'huxtable')
+
+tab2 = msummary(models = mod[c("ols","2SLS","ols_yr","2SLS_yr","2SLS_all")], 
+                       statistic = 'std.error',
+                       gof_omit = 'DF|Deviance|AIC|BIC|R2 Adj.|p.value|F$|1. Stage F:|se_type|statistic|Log.Lik.|Num.Obs.|N',
+               add_rows = rows,
+               fmt = 2,
+               stars = TRUE,
                coef_omit = 'yob_fct',
                output = 'huxtable')
 
 htab = tab %>%
+  set_bottom_border(row = 6, col = everywhere) %>%
+  set_bold(1, everywhere) %>%
+  set_tb_padding(4)
+
+htab2 = tab2 %>%
   set_bottom_border(row = 6, col = everywhere) %>%
   set_bold(1, everywhere) %>%
   set_tb_padding(4)
@@ -759,7 +776,7 @@ htab
 
 .left-wide[
 ```{r,echo = FALSE}
-htab
+htab2
 ```
 ]
 
@@ -1088,7 +1105,7 @@ mods[["IV"]] <- estimatr::iv_robust(log(bwght) ~  packs | cigprice, data = bwght
 ```
 
 ```{r,echo = FALSE}
-modelsummary(mods, gof_omit = 'DF|Deviance|AIC|BIC|R2 Adj.|p.value|F$|se_type|statistic|Log.Lik.|Num.Obs.|N', output = "huxtable") %>%
+modelsummary(mods, gof_omit = 'DF|Deviance|AIC|BIC|R2 Adj.|p.value|F$|se_type|statistic|Log.Lik.|Num.Obs.|N|RMSE', output = "huxtable") %>%
   set_bottom_border(row = 7, col = everywhere) %>%
   set_bold(1, everywhere) %>%
   set_tb_padding(5)
