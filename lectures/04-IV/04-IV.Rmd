@@ -424,7 +424,7 @@ Note quite. Angus Deaton says:
 # Snow's Model and Some Algebra
 
 Remember our simple model:
-$$c_i = \alpha + \delta + u_i$$
+$$c_i = \alpha + \delta w_i + u_i$$
 Now let's condition on both values of $w$:
 \begin{align}
 E[c_i | w_i = 1] &= \alpha + \delta + E[u_i | w_i = 1] \\
