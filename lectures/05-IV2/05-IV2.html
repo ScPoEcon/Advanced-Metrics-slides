@@ -37,7 +37,7 @@ class: center, middle, inverse, title-slide
 ### Florian Oswald
 ]
 .date[
-### SciencesPo Paris </br> 2024-03-06
+### SciencesPo Paris </br> 2024-03-12
 ]
 
 ---
@@ -272,15 +272,15 @@ $$
     1. construct an IV that encodes *birth date of student*.
     1. Child born just after cutoff date will start school later!
     
-* Suppose all children who reach the age of 6 by 31st of december 2021 are required to enroll in the first grade of school in september 2021.
+* Suppose all children who reach the age of 6 by 31st of december 2021 are required to enroll in the first grade of school in september of that year (2021).
 ]
 
 --
 
 .pull-right[
-* If born in September 2015 (i.e. 6 years prior), will be 5 years and 3/4 by the time they start school.
+* If born on 31/12/2015, they will be 5 years and 3/4 by the time they start school.
 
-* If born on the 1st of January 2016 will be 6 and 3/4 years when *they* enter school in september 2022.
+* If born on 01/01/2016 they will be also and 3/4 years when *they* enter school (just one year later).
 
 * However, people can drop out of school legally on their 16-th birthday! 
 
@@ -290,6 +290,63 @@ $$
 ]
 
 ---
+
+# Birthdate Setup
+
+Let's set up 2 children:
+
+
+```r
+library(lubridate)
+born1 = as.Date("2015-12-31")
+born2 = as.Date("2016-01-01")
+school1 = as.Date("2021-09-01")
+school2 = as.Date("2022-09-01")
+```
+
+How much days of school if they drop out on their 16-th birthday?
+
+
+
+---
+
+# Birthdate Setup
+
+Let's set up 2 children:
+
+
+```r
+library(lubridate)
+born1 = as.Date("2015-12-31")
+born2 = as.Date("2016-01-01")
+school1 = as.Date("2021-09-01")
+school2 = as.Date("2022-09-01")
+```
+
+How much days of school if they drop out on their 16-th birthday?
+
+
+
+```r
+dropout1 = born1 %m+% years(16)
+dropout2 = born2 %m+% years(16)
+(schooldays1 = dropout1 - school1)
+```
+
+```
+## Time difference of 3773 days
+```
+
+```r
+(schooldays2 = dropout2 - school2)
+```
+
+```
+## Time difference of 3409 days
+```
+
+---
+
 
 # AK91 IV setup
 
@@ -783,7 +840,7 @@ mod[["2SLS_all"]] &lt;- estimatr::iv_robust(lnw ~ s  + yob_fct | qob_fct + yob_f
 ```
 
 
-<table class="huxtable" style="border-collapse: collapse; border: 0px; margin-bottom: 2em; margin-top: 2em; ; margin-left: auto; margin-right: auto;  " id="tab:unnamed-chunk-8">
+<table class="huxtable" style="border-collapse: collapse; border: 0px; margin-bottom: 2em; margin-top: 2em; ; margin-left: auto; margin-right: auto;  " id="tab:unnamed-chunk-11">
 <col><col><col><col><col><tr>
 <th style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 1pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: bold;"> </th><th style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 1pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: bold;">ols</th><th style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 1pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: bold;">1. stage</th><th style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 1pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: bold;">2. stage</th><th style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 1pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: bold;">2SLS</th></tr>
 <tr>
@@ -818,7 +875,7 @@ mod[["2SLS_all"]] &lt;- estimatr::iv_robust(lnw ~ s  + yob_fct | qob_fct + yob_f
 # Additional Control Variables
 
 .left-wide[
-<table class="huxtable" style="border-collapse: collapse; border: 0px; margin-bottom: 2em; margin-top: 2em; ; margin-left: auto; margin-right: auto;  " id="tab:unnamed-chunk-9">
+<table class="huxtable" style="border-collapse: collapse; border: 0px; margin-bottom: 2em; margin-top: 2em; ; margin-left: auto; margin-right: auto;  " id="tab:unnamed-chunk-12">
 <col><col><col><col><col><col><tr>
 <th style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 1pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: bold;"> </th><th style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 1pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: bold;">ols</th><th style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 1pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: bold;">2SLS</th><th style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 1pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: bold;">ols_yr</th><th style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 1pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: bold;">2SLS_yr</th><th style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 1pt 0pt;    padding: 4pt 6pt 4pt 6pt; font-weight: bold;">2SLS_all</th></tr>
 <tr>
@@ -1056,7 +1113,7 @@ mods[['First Stage']] &lt;- lm(educ ~ fatheduc, data = subset(mroz, inlf == 1))
 mods$IV  &lt;- estimatr::iv_robust(lwage ~ educ | fatheduc, data = mroz)
 ```
 
-<table class="huxtable" style="border-collapse: collapse; border: 0px; margin-bottom: 2em; margin-top: 2em; ; margin-left: auto; margin-right: auto;  " id="tab:unnamed-chunk-10">
+<table class="huxtable" style="border-collapse: collapse; border: 0px; margin-bottom: 2em; margin-top: 2em; ; margin-left: auto; margin-right: auto;  " id="tab:unnamed-chunk-13">
 <col><col><col><col><tr>
 <th style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 1pt 0pt;    padding: 5pt 6pt 5pt 6pt; font-weight: bold;"> </th><th style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 1pt 0pt;    padding: 5pt 6pt 5pt 6pt; font-weight: bold;">OLS</th><th style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 1pt 0pt;    padding: 5pt 6pt 5pt 6pt; font-weight: bold;">First Stage</th><th style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 1pt 0pt;    padding: 5pt 6pt 5pt 6pt; font-weight: bold;">IV</th></tr>
 <tr>
@@ -1138,7 +1195,7 @@ mods[["First Stage"]] &lt;- lm(packs ~ cigprice, data = bwght)
 mods[["IV"]] &lt;- estimatr::iv_robust(log(bwght) ~  packs | cigprice, data = bwght, diagnostics = TRUE)
 ```
 
-<table class="huxtable" style="border-collapse: collapse; border: 0px; margin-bottom: 2em; margin-top: 2em; ; margin-left: auto; margin-right: auto;  " id="tab:unnamed-chunk-11">
+<table class="huxtable" style="border-collapse: collapse; border: 0px; margin-bottom: 2em; margin-top: 2em; ; margin-left: auto; margin-right: auto;  " id="tab:unnamed-chunk-14">
 <col><col><col><tr>
 <th style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 1pt 0pt;    padding: 5pt 6pt 5pt 6pt; font-weight: bold;"> </th><th style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 1pt 0pt;    padding: 5pt 6pt 5pt 6pt; font-weight: bold;">First Stage</th><th style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 1pt 0pt;    padding: 5pt 6pt 5pt 6pt; font-weight: bold;">IV</th></tr>
 <tr>

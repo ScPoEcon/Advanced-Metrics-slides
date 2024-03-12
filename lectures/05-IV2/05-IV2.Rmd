@@ -353,15 +353,15 @@ d
     1. construct an IV that encodes *birth date of student*.
     1. Child born just after cutoff date will start school later!
     
-* Suppose all children who reach the age of 6 by 31st of december 2021 are required to enroll in the first grade of school in september 2021.
+* Suppose all children who reach the age of 6 by 31st of december 2021 are required to enroll in the first grade of school in september of that year (2021).
 ]
 
 --
 
 .pull-right[
-* If born in September 2015 (i.e. 6 years prior), will be 5 years and 3/4 by the time they start school.
+* If born on 31/12/2015, they will be 5 years and 3/4 by the time they start school.
 
-* If born on the 1st of January 2016 will be 6 and 3/4 years when *they* enter school in september 2022.
+* If born on 01/01/2016 they will be also and 3/4 years when *they* enter school (just one year later).
 
 * However, people can drop out of school legally on their 16-th birthday! 
 
@@ -371,6 +371,49 @@ d
 ]
 
 ---
+
+# Birthdate Setup
+
+Let's set up 2 children:
+
+```{r}
+library(lubridate)
+born1 = as.Date("2015-12-31")
+born2 = as.Date("2016-01-01")
+school1 = as.Date("2021-09-01")
+school2 = as.Date("2022-09-01")
+```
+
+How much days of school if they drop out on their 16-th birthday?
+
+
+
+---
+
+# Birthdate Setup
+
+Let's set up 2 children:
+
+```{r,eval = FALSE}
+library(lubridate)
+born1 = as.Date("2015-12-31")
+born2 = as.Date("2016-01-01")
+school1 = as.Date("2021-09-01")
+school2 = as.Date("2022-09-01")
+```
+
+How much days of school if they drop out on their 16-th birthday?
+
+
+```{r}
+dropout1 = born1 %m+% years(16)
+dropout2 = born2 %m+% years(16)
+(schooldays1 = dropout1 - school1)
+(schooldays2 = dropout2 - school2)
+```
+
+---
+
 
 # AK91 IV setup
 
