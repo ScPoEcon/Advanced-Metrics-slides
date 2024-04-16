@@ -25,10 +25,18 @@
     <textarea id="source">
 class: center, middle, inverse, title-slide
 
+.title[
 # ScPoEconometrics: Advanced
+]
+.subtitle[
 ## Panel Data
+]
+.author[
 ### Florian Oswald
-### SciencesPo Paris </br> 2021-03-15
+]
+.date[
+### SciencesPo Paris </br> 2024-03-13
+]
 
 ---
 
@@ -73,14 +81,42 @@ layout: true
 .pull-left[
 So far, we dealt with data that looks like this:
 
-
-| County | CrimeRate | ProbofArrest |
-|:------:|:---------:|:------------:|
-|   1    | 0.0398849 |   0.289696   |
-|   3    | 0.0163921 |   0.202899   |
-|   5    | 0.0093372 |   0.406593   |
-|   7    | 0.0219159 |   0.431095   |
-|   9    | 0.0075178 |   0.631579   |
+&lt;table&gt;
+ &lt;thead&gt;
+  &lt;tr&gt;
+   &lt;th style="text-align:center;"&gt; County &lt;/th&gt;
+   &lt;th style="text-align:center;"&gt; CrimeRate &lt;/th&gt;
+   &lt;th style="text-align:center;"&gt; ProbofArrest &lt;/th&gt;
+  &lt;/tr&gt;
+ &lt;/thead&gt;
+&lt;tbody&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:center;"&gt; 1 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 0.0398849 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 0.289696 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:center;"&gt; 3 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 0.0163921 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 0.202899 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:center;"&gt; 5 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 0.0093372 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 0.406593 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:center;"&gt; 7 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 0.0219159 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 0.431095 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:center;"&gt; 9 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 0.0075178 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 0.631579 &lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
 ]
 
 .pull-right[
@@ -104,18 +140,72 @@ So far, we dealt with data that looks like this:
 .pull-left[
 Now, let's add a `time` index: `Year`.
 
-
-| County | Year | CrimeRate | ProbofArrest |
-|:------:|:----:|:---------:|:------------:|
-|   1    |  81  | 0.0398849 |   0.289696   |
-|   1    |  82  | 0.0383449 |   0.338111   |
-|   1    |  83  | 0.0303048 |   0.330449   |
-|   1    |  84  | 0.0347259 |   0.362525   |
-|   1    |  85  | 0.0365730 |   0.325395   |
-|   1    |  86  | 0.0347524 |   0.326062   |
-|   1    |  87  | 0.0356036 |   0.298270   |
-|   3    |  81  | 0.0163921 |   0.202899   |
-|   3    |  82  | 0.0190651 |   0.162218   |
+&lt;table&gt;
+ &lt;thead&gt;
+  &lt;tr&gt;
+   &lt;th style="text-align:center;"&gt; County &lt;/th&gt;
+   &lt;th style="text-align:center;"&gt; Year &lt;/th&gt;
+   &lt;th style="text-align:center;"&gt; CrimeRate &lt;/th&gt;
+   &lt;th style="text-align:center;"&gt; ProbofArrest &lt;/th&gt;
+  &lt;/tr&gt;
+ &lt;/thead&gt;
+&lt;tbody&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:center;"&gt; 1 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 81 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 0.0398849 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 0.289696 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:center;"&gt; 1 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 82 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 0.0383449 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 0.338111 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:center;"&gt; 1 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 83 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 0.0303048 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 0.330449 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:center;"&gt; 1 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 84 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 0.0347259 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 0.362525 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:center;"&gt; 1 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 85 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 0.0365730 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 0.325395 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:center;"&gt; 1 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 86 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 0.0347524 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 0.326062 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:center;"&gt; 1 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 87 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 0.0356036 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 0.298270 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:center;"&gt; 3 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 81 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 0.0163921 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 0.202899 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:center;"&gt; 3 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 82 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 0.0190651 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 0.162218 &lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
 ]
 
 .pull-right[
@@ -477,7 +567,7 @@ broom::tidy(mod$dummy)
 ```
 
 ```
-## # A tibble: 5 x 5
+## # A tibble: 5 × 5
 ##   term              estimate std.error statistic  p.value
 ##   &lt;chr&gt;                &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;    &lt;dbl&gt;
 ## 1 (Intercept)        0.0449    0.00456      9.87 9.85e-10
@@ -683,11 +773,7 @@ mod$FE = fixest::feols(crmrte ~ prbarr | county, cdata)
 <tr>
 <td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 1pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 1pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 1pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 1pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;">(0.013)</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 1pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;"></td></tr>
 <tr>
-<td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 0pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;">R2</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 0pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;">0.390</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 0pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;">0.893</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 0pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;">0.159</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 0pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;">0.893</td></tr>
-<tr>
-<td style="vertical-align: top; text-align: left; white-space: normal; padding: 6pt 6pt 6pt 6pt; font-weight: normal;">FE: county</td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 6pt 6pt 6pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 6pt 6pt 6pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 6pt 6pt 6pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; padding: 6pt 6pt 6pt 6pt; font-weight: normal;">X</td></tr>
-<tr>
-<td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 1pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;">Std. errors</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 1pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 1pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 1pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;"></td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 0pt 0pt 1pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;">Clustered (county)</td></tr>
+<td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 1pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;">R2</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 1pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;">0.390</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 1pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;">0.893</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 1pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;">0.159</td><td style="vertical-align: top; text-align: left; white-space: normal; border-style: solid solid solid solid; border-width: 1pt 0pt 1pt 0pt;    padding: 6pt 6pt 6pt 6pt; font-weight: normal;">0.893</td></tr>
 </table>
 
 ]
@@ -795,6 +881,19 @@ if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
     deleted = true;
   });
 })();
+// add `data-at-shortcutkeys` attribute to <body> to resolve conflicts with JAWS
+// screen reader (see PR #262)
+(function(d) {
+  let res = {};
+  d.querySelectorAll('.remark-help-content table tr').forEach(tr => {
+    const t = tr.querySelector('td:nth-child(2)').innerText;
+    tr.querySelectorAll('td:first-child .key').forEach(key => {
+      const k = key.innerText;
+      if (/^[a-z]$/.test(k)) res[k] = t;  // must be a single letter (key)
+    });
+  });
+  d.body.setAttribute('data-at-shortcutkeys', JSON.stringify(res));
+})(document);
 (function() {
   "use strict"
   // Replace <script> tags in slides area to make them executable

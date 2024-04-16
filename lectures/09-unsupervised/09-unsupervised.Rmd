@@ -422,9 +422,9 @@ dim(ames_train_x)
 
 * Here is the correlation matrix of the first 60 predictors:
 ```{r,eval = FALSE}
-ca = cor(ames_train_x[,1:60])
+ca = cor(ames_train_x[,1:60], use = "pairwise.complete.obs")
 corrplot::corrplot(ca,
-                   tl.pos = "n")
+                   tl.pos = "n",na.label = " ")
 ```
 
 * Darker colours spell trouble!
@@ -435,7 +435,7 @@ corrplot::corrplot(ca,
 
 ```{r,echo = FALSE,fig.height = 5}
 ca = cor(ames_train_x[,1:60])
-corrplot::corrplot(ca,addgrid.col = FALSE,tl.pos = "n")
+corrplot::corrplot(ca,addgrid.col = FALSE,tl.pos = "n",na.label = " ")
 ```
 ]
 
@@ -765,14 +765,73 @@ abline(v = log(ames_lasso$lambda.1se), col = "red", lty = "dashed")
 .pull-right[
 
 ```{r,echo = FALSE, fig.height=9}
-coef(ames_lasso, s = "lambda.1se") %>%
-  tidy() %>%
-  filter(row != "(Intercept)") %>%
-  ggplot(aes(value, reorder(row, value), color = value > 0)) +
-  geom_point(show.legend = FALSE) +
-  ggtitle("Influential variables") +
-  xlab("Coefficient") +
-  ylab(NULL)
+ames_cdf = coef(ames_lasso, s = "lambda.1se") %>%
+    as.matrix() %>%
+    data.frame()
+ames_cdf$variable = rownames(ames_cdf)
+rownames(ames_cdf) <- NULL
+ames_cdf$variable = reorder(ames_cdf$variable,ames_cdf$s1)
+
+ames_cdf[1:50,] %>%
+    filter(variable != "(Intercept)") %>%
+    ggplot(aes(s1, reorder(variable, s1), color = s1 > 0)) +
+    geom_point(show.legend = FALSE) +
+    ggtitle("Influential variables") +
+    xlab("Coefficient") +
+    ylab(NULL)
+```
+]
+
+
+---
+
+# lasso vars
+
+.pull-left[
+* So, the lasso really *selects* variables.
+
+* Which ones are the most influental variables then?
+
+* Remember, this is about finding the best *predictive* model.
+
+]
+
+.pull-right[
+
+```{r,echo = FALSE, fig.height=9}
+ames_cdf[100:200,] %>%
+    filter(variable != "(Intercept)") %>%
+    ggplot(aes(s1, reorder(variable, s1), color = s1 > 0)) +
+    geom_point(show.legend = FALSE) +
+    ggtitle("Influential variables") +
+    xlab("Coefficient") +
+    ylab(NULL)
+```
+]
+
+---
+
+# lasso vars
+
+.pull-left[
+* So, the lasso really *selects* variables.
+
+* Which ones are the most influental variables then?
+
+* Remember, this is about finding the best *predictive* model.
+
+]
+
+.pull-right[
+
+```{r,echo = FALSE, fig.height=9}
+ames_cdf[201:309,] %>%
+    filter(variable != "(Intercept)") %>%
+    ggplot(aes(s1, reorder(variable, s1), color = s1 > 0)) +
+    geom_point(show.legend = FALSE) +
+    ggtitle("Influential variables") +
+    xlab("Coefficient") +
+    ylab(NULL)
 ```
 ]
 

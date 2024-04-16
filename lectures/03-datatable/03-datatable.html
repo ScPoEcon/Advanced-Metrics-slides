@@ -1239,12 +1239,12 @@ starwars_dt[, mean_height := mean(height, na.rm=T)] %&gt;% ## Add mean height as
 ```
 
 ```
-##                     name height mean_height
-## 1: Wicket Systri Warrick     88     174.358
-## 2:                 IG-88    200     174.358
-## 3:        Luke Skywalker    172     174.358
-## 4:           Leia Organa    150     174.358
-## 5:        Wedge Antilles    170     174.358
+##              name height mean_height
+## 1: Luke Skywalker    172     174.358
+## 2:          C-3PO    167     174.358
+## 3:          R2-D2     96     174.358
+## 4:    Darth Vader    202     174.358
+## 5:    Leia Organa    150     174.358
 ```
 
 ---
@@ -1298,9 +1298,9 @@ starwars_dt[, .(mean_height = mean(height, na.rm=T)), by = .(species, homeworld)
 
 ```
 ##    species homeworld mean_height
-## 1:    Ewok     Endor     88.0000
-## 2:   Droid      &lt;NA&gt;    148.0000
-## 3:   Human  Tatooine    179.2500
+## 1:   Human  Tatooine    179.2500
+## 2:   Droid  Tatooine    132.0000
+## 3:   Droid     Naboo     96.0000
 ## 4:   Human  Alderaan    176.3333
 ```
 
